@@ -1,6 +1,6 @@
 from pathlib import Path
 import sqlite3
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 from datetime import datetime
 import json
 import os
@@ -83,7 +83,7 @@ class Store:
             raise ValueError('Escolha um arquivo novo para o backup.')
         target.parent.mkdir(parents=True, exist_ok=True)
         try:
-            with sqlite3.connect(target) as dest:
+            with closing(sqlite3.connect(target)) as dest, dest:
                 self.db.backup(dest)
                 self.validate(dest)
         except Exception:
@@ -102,14 +102,14 @@ class Store:
         os.close(fd)
         try:
             shutil.copyfile(source, staged)
-            with sqlite3.connect(Path(staged).as_uri() + '?mode=ro', uri=True) as candidate:
+            with closing(sqlite3.connect(Path(staged).as_uri() + '?mode=ro', uri=True)) as candidate:
                 candidate.execute('PRAGMA trusted_schema=OFF')
                 self.validate(candidate)
                 expected = {'meta','settings','products','filaments','product_colors','sku_codes','origins','orders','order_items','expenses','purchases','stats','audit'}
                 tables = {r[0] for r in candidate.execute("SELECT name FROM sqlite_master WHERE type='table'")}
                 if tables != expected or candidate.execute("SELECT 1 FROM sqlite_master WHERE type IN ('trigger','view')").fetchone():
                     raise ValueError('Estrutura de backup não reconhecida.')
-                with sqlite3.connect(':memory:') as reference:
+                with closing(sqlite3.connect(':memory:')) as reference:
                     reference.executescript(Path(__file__).with_name('schema.sql').read_text(encoding='utf-8'))
                     def definitions(conn):
                         return {r[0]: ' '.join(r[1].split()).lower() for r in conn.execute("SELECT name,sql FROM sqlite_master WHERE type='table'")}

@@ -1,5 +1,6 @@
 from zipfile import ZipFile
 import sqlite3
+from contextlib import closing
 import pytest
 from openpyxl import Workbook,load_workbook
 from forgeon.db.store import Store
@@ -14,7 +15,7 @@ def test_backup_restore_and_preservation(erp,product,tmp_path):
     erp.save_product({'name':'Depois'})
     previous=erp.s.restore(backup)
     assert [p['name'] for p in erp.s.rows('SELECT * FROM products')]==['Sonic']
-    with sqlite3.connect(previous) as c:
+    with closing(sqlite3.connect(previous)) as c, c:
         assert c.execute('SELECT count(*) FROM products').fetchone()[0]==2
     erp.s.validate(erp.s.db)
     with pytest.raises(ValueError):erp.s.backup(backup)
@@ -22,7 +23,7 @@ def test_backup_restore_and_preservation(erp,product,tmp_path):
 
 def test_incompatible_backup_rejected_without_changing_database(erp,product,tmp_path):
     old=tmp_path/'legacy.sqlite3'
-    with sqlite3.connect(old) as c:c.execute('CREATE TABLE old(x)')
+    with closing(sqlite3.connect(old)) as c, c:c.execute('CREATE TABLE old(x)')
     with pytest.raises(ValueError):erp.s.restore(old)
     assert erp.product(product)['name']=='Sonic'
     old.write_bytes(b'not sqlite')
@@ -32,7 +33,7 @@ def test_incompatible_backup_rejected_without_changing_database(erp,product,tmp_
 
 def test_backup_with_trigger_rejected(erp,product,tmp_path):
     path=erp.s.backup(tmp_path/'unsafe.sqlite3')
-    with sqlite3.connect(path) as c:
+    with closing(sqlite3.connect(path)) as c, c:
         c.execute("CREATE TRIGGER bad AFTER INSERT ON products BEGIN DELETE FROM products; END")
     with pytest.raises(ValueError):erp.s.restore(path)
     assert erp.product(product)['name']=='Sonic'

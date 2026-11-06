@@ -1,4 +1,5 @@
 import sqlite3
+from contextlib import closing
 import pytest
 from forgeon.importers.sheets import preview_stats,read_xlsx
 from forgeon.importers.slicing import duration
@@ -18,7 +19,7 @@ def test_stats_reject_total_row():
 
 def test_schema_mismatch_not_restored(erp,product,tmp_path):
     path=erp.s.backup(tmp_path/'different.sqlite3')
-    with sqlite3.connect(path) as db:db.execute('ALTER TABLE products ADD COLUMN incompatible TEXT')
+    with closing(sqlite3.connect(path)) as db, db:db.execute('ALTER TABLE products ADD COLUMN incompatible TEXT')
     with pytest.raises(ValueError,match='Esquema'):erp.s.restore(path)
     assert erp.product(product)['name']=='Sonic'
 
@@ -57,3 +58,12 @@ def test_blank_status_rejected():
     from forgeon.importers.sheets import preview_orders
     from test_orders import row,M
     with pytest.raises(ValueError):preview_orders([row(status='')],M)
+
+
+def test_restore_closes_staged_database_before_removing_it(erp,product,tmp_path):
+    backup=erp.s.backup(tmp_path/'valid.sqlite3')
+    erp.s.restore(backup)
+    assert not list(erp.s.path.parent.glob('*.restore'))
+    # On Windows deletion also verifies that backup connections released file handles.
+    backup.unlink()
+    assert not backup.exists()
