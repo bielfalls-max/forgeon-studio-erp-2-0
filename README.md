@@ -2,7 +2,9 @@
 
 Aplicativo desktop local para gestão de pequena empresa de impressão 3D. Projeto criado do zero em Python 3.12, PySide6/Qt Widgets e SQLite. Interface em português, tema escuro e dados persistentes. O banco de produção é criado vazio no primeiro uso. Nenhum arquivo de versões antigas é necessário ou reutilizado.
 
-**Entrega em código-fonte.** Não contém instalador nem executável Windows compilado. A instalação abaixo cria um ambiente Python isolado dentro da pasta do projeto. Não modifica a instalação antiga do Forgeon.
+**Versão instalável para Windows:** veja [Instalador Windows](docs/INSTALADOR_WINDOWS.md). O instalador inclui Python e bibliotecas; o ZIP do botão Code contém apenas os fontes. A compilação e os testes nativos são feitos pelo fluxo **Instalador Windows**, na aba Actions. O instalador só está disponível após uma execução bem-sucedida.
+
+As instruções abaixo são para executar **a versão em código-fonte**, criando um ambiente Python isolado. Ela não modifica a instalação antiga do Forgeon.
 
 ## Instalar no Windows 10/11 de 64 bits
 

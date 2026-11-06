@@ -1,11 +1,12 @@
 FORGEON_STUDIO_ERP_2_0/
+  .github/workflows/windows-installer.yml
   .gitignore
   README.md
-  SHA256SUMS.txt
   abrir_forgeon.bat
   docs/ARQUITETURA.md
   docs/ARVORE.txt
   docs/DEPENDENCIAS_E_SEGURANCA.md
+  docs/INSTALADOR_WINDOWS.md
   docs/REGRAS_FINANCEIRAS.md
   docs/VALIDACAO.md
   docs/resultado_pytest.txt
@@ -23,18 +24,24 @@ FORGEON_STUDIO_ERP_2_0/
   forgeon/importers/catalog.py
   forgeon/importers/sheets.py
   forgeon/importers/slicing.py
+  forgeon/packaging_check.py
   forgeon/reports/__init__.py
   forgeon/reports/finance.py
   forgeon/reports/xlsx.py
   forgeon/ui/__init__.py
   forgeon/ui/main.py
   forgeon/ui/widgets.py
+  forgeon_launcher.py
   modelos/modelo_despesas.xlsx
   modelos/modelo_estatisticas.xlsx
   modelos/modelo_filamentos.xlsx
   modelos/modelo_pedidos.xlsx
   modelos/modelo_produtos.xlsx
+  packaging/ForgeonStudioERP.iss
+  packaging/ForgeonStudioERP.spec
+  packaging/windows-installer.yml
   pyproject.toml
+  requirements-build.txt
   requirements-dev.txt
   requirements.txt
   tests/conftest.py
@@ -42,4 +49,6 @@ FORGEON_STUDIO_ERP_2_0/
   tests/test_business.py
   tests/test_files.py
   tests/test_orders.py
+  tests/test_packaging.py
   tests/test_ui.py
+  SHA256SUMS.txt

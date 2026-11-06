@@ -42,3 +42,7 @@ A reescrita não garante segurança nem ausência de alertas. A origem do alerta
 Não desative o Defender, não crie exceções e não restaure arquivos bloqueados para usar este projeto. Se o arquivo for bloqueado, interrompa a instalação e trate o alerta pelos procedimentos normais de análise. Nenhum arquivo foi enviado a serviço externo de análise nesta execução. A instalação antiga não foi consultada ou modificada.
 
 O banco não é criptografado. Permissões da conta Windows e backups em local confiável protegem o acesso. Backups podem conter informações comerciais e devem receber o mesmo cuidado que o banco. A pasta de backups não tem limpeza automática: revise espaço em disco e guarde cópias em outra mídia.
+
+## Empacotamento Windows acrescentado
+
+A compilação utiliza PyInstaller 6.16.0, hooks 2025.9, altgraph 0.17.4, setuptools 80.9.0, pefile 2023.2.7 e pywin32-ctypes 0.2.3, além das dependências já descritas, com versões fixadas em `requirements-build.txt`. O instalador Inno Setup 6 vem do runner Windows oficial do GitHub; sua versão é registrada nos logs da compilação. As bibliotecas incluídas mantêm suas licenças e metadados no pacote gerado pelo PyInstaller. Confira as condições de redistribuição do Qt/PySide6 antes de redistribuir. Nenhuma análise antivírus foi adicionada ao fluxo. Veja `INSTALADOR_WINDOWS.md`.

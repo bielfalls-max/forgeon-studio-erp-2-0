@@ -5,3 +5,8 @@ __pycache__/
 *.sqlite3
 *.lock
 backups/
+
+build/
+dist/
+resultado-windows.xml
+verificacao-*.json
