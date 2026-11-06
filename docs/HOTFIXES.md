@@ -27,6 +27,6 @@ O SHA-256 confirma que os bytes correspondem ao artefato publicado pelo GitHub. 
 - Passe o mouse nos pontos, barras e fatias para ver valores. Use botão direito no gráfico para salvar em PNG.
 - **Exportar PDF** salva indicadores, filtros, produtos em destaque e gráficos. XLSX permanece disponível.
 - Clique no cabeçalho para ordenar, arraste para mudar a posição e use o botão direito no cabeçalho para ocultar/mostrar colunas.
-- Botão direito na tabela: copiar a linha ou exportar apenas as colunas visíveis, na ordem apresentada. A edição usa o registro efetivamente selecionado após ordenar.
+- Botão direito na tabela: copiar a linha como texto para planilha ou exportar apenas as colunas visíveis, na ordem apresentada. A cópia usa apóstrofo para preservar SKUs e impedir fórmulas ao colar em planilhas; quebras de linha são convertidas em espaços. Use Mostrar todas as colunas se ocultar mais campos do que queria. A edição usa o registro efetivamente selecionado após ordenar.
 
 As imagens são recursos locais incluídos no instalador. O desfoque é da paisagem atrás dos painéis; textos e números permanecem nítidos. Não há dependência de transparência nativa do Windows, internet ou GPU avançada para o efeito. Em máquinas com pouca memória, use Modo foco.

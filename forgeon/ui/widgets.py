@@ -115,12 +115,16 @@ class Table(QTableWidget):
         return [header.logicalIndex(visual) for visual in range(self.columnCount()) if not self.isColumnHidden(header.logicalIndex(visual))]
 
     def context_menu(self,point):
-        menu=QMenu(self);menu.addAction('Copiar linha selecionada',self.copy_row);menu.addAction('Exportar colunas visíveis em XLSX',self.export_visible)
+        menu=QMenu(self);menu.addAction('Copiar linha como texto para planilha',self.copy_row);menu.addAction('Mostrar todas as colunas',self.show_all_columns);menu.addAction('Exportar colunas visíveis em XLSX',self.export_visible)
         menu.exec(self.viewport().mapToGlobal(point))
 
     def copy_row(self):
         if self.currentRow()<0:return
-        QApplication.clipboard().setText('\t'.join(self.item(self.currentRow(),col).text() for col in self.visible_columns()))
+        values=[self.item(self.currentRow(),col).text().replace('\t',' ').replace('\r',' ').replace('\n',' ') for col in self.visible_columns()]
+        QApplication.clipboard().setText('\t'.join("'"+value for value in values))
+
+    def show_all_columns(self):
+        for column in range(self.columnCount()):self.setColumnHidden(column,False)
 
     def visible_records(self):
         result=[]

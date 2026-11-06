@@ -17,6 +17,10 @@ def test_sorted_table_keeps_correct_record_and_column_selection(app):
     assert table.visible_records()[0]=={'total_cents':2000}
     table.fill([{'id':4,'total_cents':300}],[('id','ID'),('total_cents','Custo')])
     assert table.isColumnHidden(0)
+    table.show_all_columns();assert not table.isColumnHidden(0)
+    table.fill([{'sku':'00001','name':'=SUM(1)\n@teste'}],[('sku','SKU'),('name','Nome')]);table.selectRow(0);table.copy_row()
+    from PySide6.QtWidgets import QApplication
+    assert QApplication.clipboard().text()=="'00001\t'=SUM(1) @teste"
 
 
 def test_dashboard_and_reports_never_fetch_updates_on_open(app,erp,monkeypatch):
