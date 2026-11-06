@@ -1,12 +1,22 @@
 # Executar na raiz: python -m PyInstaller --clean --noconfirm packaging/ForgeonStudioERP.spec
 from pathlib import Path
+from PyInstaller.utils.hooks import copy_metadata
+import sys
 root = Path(SPECPATH).parent
+
+metadata = []
+for package in ('PySide6','PySide6_Essentials','PySide6_Addons','shiboken6','openpyxl','et_xmlfile','defusedxml'):
+    metadata += copy_metadata(package)
+licenses = [(str(root / 'packaging' / 'licenses'), 'licenses')]
+python_license = Path(sys.base_prefix) / 'LICENSE.txt'
+if python_license.is_file():
+    licenses.append((str(python_license), 'licenses/Python'))
 
 a = Analysis(
     [str(root / 'forgeon_launcher.py')],
     pathex=[str(root)],
     binaries=[],
-    datas=[(str(root / 'forgeon' / 'db' / 'schema.sql'), 'forgeon/db')],
+    datas=[(str(root / 'forgeon' / 'db' / 'schema.sql'), 'forgeon/db')] + metadata + licenses,
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
