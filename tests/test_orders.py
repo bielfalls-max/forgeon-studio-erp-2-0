@@ -6,7 +6,7 @@ M={k:k for k in ('order_id','date','status','listing','variation','sku','qty','u
 
 
 def row(oid='A',title='Sonic',sku='00001',qty='1',gross='50',status='Concluído',refund='0'):
-    return dict(order_id=oid,date='06/11/2026',status=status,listing=title,variation='10 cm',sku=sku,qty=qty,unit='25',gross=gross,fees='5',refund=refund,**{'CPF':'123','Telefone':'999','Endereço':'Privado'})
+    return dict(order_id=oid,date='06/11/2026',status=status,listing=title,variation='10 cm',sku=sku,qty=qty,unit='25',gross=gross,fees='5',refund=refund,**{'CPF':'CPF_PRIVADO_NAO_PERSISTIR','Telefone':'999','Endereço':'Privado'})
 
 
 def load(erp,rows,partial=False):
@@ -34,7 +34,7 @@ def test_multi_item_reimport_partial_and_cost_snapshot(erp,product):
     assert item['cost_cents']==old['cost_cents']
     assert item['cost_at']==old['cost_at']
     assert s.one('SELECT * FROM orders WHERE id=?',('B',))
-    assert '123' not in str(s.rows('SELECT * FROM audit'))
+    assert 'CPF_PRIVADO_NAO_PERSISTIR' not in str(s.rows('SELECT * FROM audit'))
     assert 'Privado' not in str(s.rows('SELECT * FROM order_items'))
 
 

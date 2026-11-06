@@ -7,17 +7,24 @@ FORGEON_STUDIO_ERP_2_0/
   docs/ARQUITETURA.md
   docs/ARVORE.txt
   docs/DEPENDENCIAS_E_SEGURANCA.md
+  docs/HOTFIXES.md
   docs/INSTALADOR_WINDOWS.md
   docs/REGRAS_FINANCEIRAS.md
   docs/VALIDACAO.md
   docs/resultado_pytest.txt
   forgeon/__init__.py
   forgeon/__main__.py
+  forgeon/assets/CHANGELOG.md
+  forgeon/assets/ORIGEM_DOS_RECURSOS.md
+  forgeon/assets/forgeon-dragon.png
+  forgeon/assets/forgeon.ico
+  forgeon/assets/swiss-alps.png
   forgeon/business/__init__.py
   forgeon/business/labels.py
   forgeon/business/numbers.py
   forgeon/business/pricing.py
   forgeon/business/service.py
+  forgeon/business/updates.py
   forgeon/db/__init__.py
   forgeon/db/schema.sql
   forgeon/db/store.py
@@ -30,8 +37,12 @@ FORGEON_STUDIO_ERP_2_0/
   forgeon/reports/finance.py
   forgeon/reports/xlsx.py
   forgeon/ui/__init__.py
+  forgeon/ui/charts.py
   forgeon/ui/main.py
+  forgeon/ui/updates.py
+  forgeon/ui/visual.py
   forgeon/ui/widgets.py
+  forgeon/version.py
   forgeon_launcher.py
   modelos/modelo_despesas.xlsx
   modelos/modelo_estatisticas.xlsx
@@ -44,6 +55,7 @@ FORGEON_STUDIO_ERP_2_0/
   packaging/licenses/GPL-3.0.txt
   packaging/licenses/LEIA-ME.md
   packaging/licenses/LGPL-3.0.txt
+  packaging/version-info.txt
   packaging/windows-installer.yml
   pyproject.toml
   requirements-build.txt
@@ -53,7 +65,9 @@ FORGEON_STUDIO_ERP_2_0/
   tests/test_additional.py
   tests/test_business.py
   tests/test_files.py
+  tests/test_hotfix.py
   tests/test_orders.py
   tests/test_packaging.py
   tests/test_ui.py
+  tests/test_updates.py
   SHA256SUMS.txt

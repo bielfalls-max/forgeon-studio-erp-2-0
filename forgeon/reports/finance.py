@@ -17,6 +17,7 @@ def report(erp, start, end, product_id=None, status=''):
     selected = []
     sold = defaultdict(lambda: {'qty':0,'revenue_cents':0})
     consumption = defaultdict(Decimal)
+    daily = defaultdict(Decimal)
     for o in orders:
         if status and status_kind(o['status']) != status:
             continue
@@ -35,6 +36,7 @@ def report(erp, start, end, product_id=None, status=''):
         if kind == 'cancelado':
             continue  # costs for failed production must be entered as an expense
         gross += Decimal(o['gross_cents']) * share
+        daily[o['date']] += Decimal(o['gross_cents']) * share
         fees += Decimal(o['fees_cents']) * share
         refunds += Decimal(o['refund_cents']) * share
         if kind == 'devolucao' and o['refund_cents'] == 0:
@@ -76,6 +78,7 @@ def report(erp, start, end, product_id=None, status=''):
             'operating_cents':rounded(gross-fees-refunds-production-expense_total),
             'cash_cents':rounded(gross-fees-refunds-expense_total-purchase_total),
             'stats_cents':stat_total,'difference_cents':rounded(Decimal(stat_total)-Decimal(gross)),
+            'sales_by_day':[{'date':date,'gross_cents':rounded(value)} for date,value in sorted(daily.items())],
             'best_sellers':[{'product':k,**v} for k,v in sorted(sold.items(),key=lambda kv:-kv[1]['qty'])],
             'consumption':[{'month':k[0],'fortnight':k[1],'material':k[2],'color':k[3],'grams':str(v)} for k,v in sorted(consumption.items())],
             'orders':selected,'expenses':expenses,'purchases':purchases,'stats':stats,

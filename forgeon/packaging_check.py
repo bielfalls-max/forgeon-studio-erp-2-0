@@ -17,7 +17,8 @@ def check(destination):
     previous_warning, previous_critical = QMessageBox.warning, QMessageBox.critical
     QMessageBox.warning = lambda *args, **kwargs: errors.append(str(args[-1]))
     QMessageBox.critical = lambda *args, **kwargs: errors.append(str(args[-1]))
-    result = {'ok': False, 'platform': platform.platform(), 'screens': 0, 'errors': errors}
+    from .version import VERSION
+    result = {'version':VERSION, 'ok': False, 'platform': platform.platform(), 'screens': 0, 'errors': errors}
     try:
         with tempfile.TemporaryDirectory(prefix='forgeon-check-') as folder:
             store = Store(Path(folder) / 'check.sqlite3')
@@ -32,6 +33,9 @@ def check(destination):
                 with store.transaction():
                     store.db.execute('DELETE FROM products WHERE id=?', (pid,))
                 window = MainWindow(erp)
+                assert not window.windowIcon().isNull(), 'Ícone não incluído no pacote'
+                assert not window.backdrop.image.isNull(), 'Paisagem não incluída no pacote'
+                assert window.updates_page.notes.toPlainText(), 'Notas não incluídas no pacote'
                 window.show()
                 app.processEvents()
                 for index in range(window.stack.count()):
@@ -39,7 +43,7 @@ def check(destination):
                     app.processEvents()
                     assert window.stack.currentIndex() == index
                     result['screens'] += 1
-                assert result['screens'] == 10
+                assert result['screens'] == 11
                 store.validate(store.db)
                 assert not errors, errors
                 result['ok'] = True

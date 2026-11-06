@@ -1,11 +1,13 @@
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QFormLayout,QLineEdit,QComboBox,QDialogButtonBox,
                               QLabel,QTableWidget,QTableWidgetItem,QAbstractItemView,QHeaderView,QPushButton,
-                              QWidget,QHBoxLayout,QTextBrowser,QCheckBox,QSpinBox,QMessageBox)
+                              QWidget,QHBoxLayout,QTextBrowser,QCheckBox,QSpinBox,QMessageBox,QMenu,QFileDialog,QApplication)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from ..business.numbers import money
 from ..business.labels import LABELS
 from datetime import datetime
+from decimal import Decimal, InvalidOperation
+from .visual import FlowLayout
 
 
 class Form(QDialog):
@@ -35,6 +37,12 @@ class Form(QDialog):
         return {k:(w.currentData() if isinstance(w,QComboBox) else w.text().strip()) for k,w in self.inputs.items()}
 
 
+class SortItem(QTableWidgetItem):
+    def __lt__(self,other):
+        a=self.data(Qt.ItemDataRole.UserRole+1);b=other.data(Qt.ItemDataRole.UserRole+1)
+        return a<b if a is not None and b is not None else self.text().casefold()<other.text().casefold()
+
+
 class Table(QTableWidget):
     def __init__(self):
         super().__init__()
@@ -47,13 +55,23 @@ class Table(QTableWidget):
         self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
         self.horizontalHeader().setStretchLastSection(True)
         self.setWordWrap(False)
+        self.horizontalHeader().setSectionsMovable(True)
+        self.horizontalHeader().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.horizontalHeader().customContextMenuRequested.connect(self.columns_menu)
+        self.horizontalHeader().setToolTip('Clique para ordenar, arraste para reorganizar, botão direito para escolher colunas.')
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self.context_menu)
+        self._columns=[]
 
     def fill(self,rows,columns=None,conflict=None):
+        hidden={key for index,(key,_) in enumerate(self._columns) if self.isColumnHidden(index)}
         self.records=rows
         columns=columns or [(k,LABELS.get(k,k)) for k in (rows[0] if rows else {'info':'Sem registros'})]
         self.setSortingEnabled(False)
         self.clear(); self.setRowCount(len(rows)); self.setColumnCount(len(columns))
+        self._columns=columns
         self.setHorizontalHeaderLabels([label for key,label in columns])
+        for index,(key,_) in enumerate(columns):self.setColumnHidden(index,key in hidden)
         for rn,row in enumerate(rows):
             for cn,(key,label) in enumerate(columns):
                 value=row.get(key,'')
@@ -64,10 +82,17 @@ class Table(QTableWidget):
                 if key in ('date','start','end') and isinstance(value,str):
                     try: value=datetime.strptime(value[:10],'%Y-%m-%d').strftime('%d/%m/%Y')+value[10:]
                     except ValueError: pass
-                item=QTableWidgetItem(str(value))
+                item=SortItem(str(value))
+                item.setData(Qt.ItemDataRole.UserRole,rn)
+                raw=row.get(key)
+                try:
+                    number=Decimal(str(raw)); sort=(0,number) if number.is_finite() else (1,str(raw))
+                except (InvalidOperation,ValueError):sort=(1,str(raw or '').casefold())
+                item.setData(Qt.ItemDataRole.UserRole+1,sort)
                 if conflict and conflict(row):
                     item.setBackground(QColor('#6e242a')); item.setForeground(QColor('#fff0ec'))
                 self.setItem(rn,cn,item)
+        self.setSortingEnabled(True)
         self.resizeColumnsToContents()
         for col in range(self.columnCount()):
             self.setColumnWidth(col,min(360,max(100,self.columnWidth(col))))
@@ -76,17 +101,53 @@ class Table(QTableWidget):
         row=self.currentRow()
         if row<0:
             raise ValueError('Selecione uma linha primeiro.')
-        return self.records[row]
+        return self.records[self.item(row,0).data(Qt.ItemDataRole.UserRole)]
+
+    def columns_menu(self,point):
+        menu=QMenu(self)
+        for index,(key,label) in enumerate(self._columns):
+            action=menu.addAction(label);action.setCheckable(True);action.setChecked(not self.isColumnHidden(index))
+            action.toggled.connect(lambda checked,i=index:self.setColumnHidden(i,not checked))
+        menu.exec(self.horizontalHeader().mapToGlobal(point))
+
+    def visible_columns(self):
+        header=self.horizontalHeader()
+        return [header.logicalIndex(visual) for visual in range(self.columnCount()) if not self.isColumnHidden(header.logicalIndex(visual))]
+
+    def context_menu(self,point):
+        menu=QMenu(self);menu.addAction('Copiar linha selecionada',self.copy_row);menu.addAction('Exportar colunas visíveis em XLSX',self.export_visible)
+        menu.exec(self.viewport().mapToGlobal(point))
+
+    def copy_row(self):
+        if self.currentRow()<0:return
+        QApplication.clipboard().setText('\t'.join(self.item(self.currentRow(),col).text() for col in self.visible_columns()))
+
+    def visible_records(self):
+        result=[]
+        for row in range(self.rowCount()):
+            source=self.records[self.item(row,0).data(Qt.ItemDataRole.UserRole)]
+            result.append({self._columns[col][0]:source.get(self._columns[col][0]) for col in self.visible_columns()})
+        return result
+
+    def export_visible(self):
+        if not self.visible_columns():
+            QMessageBox.information(self,'Colunas','Mostre ao menos uma coluna no menu do cabeçalho.');return
+        path,_=QFileDialog.getSaveFileName(self,'Exportar tabela visível','tabela-forgeon.xlsx','Planilha (*.xlsx)')
+        if path:
+            try:
+                from ..reports.xlsx import export
+                export(path,{'Tabela':self.visible_records()})
+            except Exception as error:QMessageBox.warning(self,'Exportar',str(error))
 
 
 class Page(QWidget):
     def __init__(self,title,subtitle=''):
         super().__init__()
-        self.layout=QVBoxLayout(self); self.layout.setContentsMargins(28,24,28,24); self.layout.setSpacing(16)
+        self.layout=QVBoxLayout(self); self.layout.setContentsMargins(26,24,26,22); self.layout.setSpacing(14)
         heading=QLabel(title); heading.setObjectName('pageTitle'); self.layout.addWidget(heading)
         if subtitle:
             sub=QLabel(subtitle); sub.setWordWrap(True); sub.setObjectName('subtitle'); self.layout.addWidget(sub)
-        self.toolbar=QHBoxLayout(); self.layout.addLayout(self.toolbar)
+        self.toolbar=FlowLayout(); self.layout.addLayout(self.toolbar)
 
     def button(self,text,callback,primary=False):
         b=QPushButton(text)
@@ -113,27 +174,46 @@ def preview(parent,title,rows,note=''):
 
 
 STYLE='''
-QWidget { background: #15181e; color: #ede9e1; font-family: "Segoe UI", sans-serif; font-size: 13px; }
-QMainWindow, QStackedWidget { background: #15181e; }
-QLabel#brand { font-size: 26px; font-weight: 800; color: #ff9c48; letter-spacing: 2px; }
-QLabel#pageTitle { font-size: 27px; font-weight: 700; }
-QLabel#subtitle { color: #adafb7; }
-QListWidget { background: #101217; border: none; padding: 10px; font-size: 14px; outline: none; }
-QListWidget::item { padding: 12px 10px; border-radius: 6px; margin: 2px; }
-QListWidget::item:selected { background: #592c27; color: #ffba72; border-left: 3px solid #ed743b; }
-QPushButton { background: #292d36; border: 1px solid #404550; padding: 9px 14px; border-radius: 5px; }
-QPushButton:hover { background: #3a3d46; border-color: #d29358; }
-QPushButton#primary { background: #b74629; border-color: #d36036; color: white; font-weight: 600; }
-QLineEdit, QComboBox, QSpinBox, QDateEdit { background: #20242c; padding: 8px; border: 1px solid #414650; border-radius: 4px; selection-background-color: #a64229; }
-QTableWidget { background: #1a1e25; alternate-background-color: #20242c; border: 1px solid #343941; gridline-color: #30353d; }
-QTableWidget::item { padding: 8px; }
-QTableWidget::item:selected { background: #5b3b2e; }
-QHeaderView::section { background: #292d35; color: #deb477; padding: 11px; border: none; border-bottom: 1px solid #51504a; font-weight: 600; }
-QTextBrowser { background: #1c2027; border: 1px solid #353a43; padding: 16px; }
-QCheckBox { padding: 4px; }
-QStatusBar { color: #aaa59d; background: #101217; }
-QScrollBar:vertical { background: #1b1e25; width: 12px; }
-QScrollBar::handle:vertical { background: #505059; border-radius: 5px; min-height: 20px; }
-QTabBar::tab { padding: 10px; background: #292d35; }
-QTabBar::tab:selected { color: #ffad63; }
+QWidget { background: transparent; color: #e5edf6; font-family: "Segoe UI", sans-serif; font-size: 13px; }
+QMainWindow { background: #0a1221; }
+QDialog, QMessageBox, QMenu { background: #142239; }
+QLabel#brand { font-size: 23px; font-weight: 800; color: #fff3e5; letter-spacing: 3px; }
+QLabel#pageTitle { font-size: 27px; font-weight: 700; color: #f5f4f1; }
+QLabel#subtitle, QLabel#muted { color: #a9bad0; font-size: 12px; }
+QLabel#sectionTitle { font-size: 16px; font-weight: 650; color: #f0eee8; }
+QLabel#metricTitle { color: #9eb3cc; font-size: 11px; letter-spacing: 1px; font-weight: 650; }
+QLabel#metricValue { color: #f7f0e7; font-size: 29px; font-weight: 650; }
+QLabel#badge { color: #f6c39f; background: rgba(171,105,62,36); border: 1px solid rgba(245,173,120,60); border-radius: 9px; padding: 8px 12px; font-size: 11px; }
+QListWidget { background: transparent; border: none; padding: 0px; font-size: 13px; outline: none; }
+QListWidget::item { padding: 11px 12px; border-radius: 10px; margin: 3px 0px; color: #b7c7db; }
+QListWidget::item:selected { background: rgba(216,139,85,32); color: #ffcfaa; border: 1px solid rgba(248,179,127,65); }
+QListWidget::item:hover { background: rgba(170,198,231,15); }
+QPushButton { background: rgba(30,49,73,225); border: 1px solid rgba(189,214,244,40); padding: 9px 14px; border-radius: 9px; color: #e3edf8; }
+QPushButton:hover { background: #304967; border-color: #a47959; }
+QPushButton:disabled { color: #70849b; background: #17263a; }
+QPushButton#primary { background: #c48255; border-color: #dea57c; color: #111c2b; font-weight: 700; }
+QPushButton#primary:hover { background: #e4a574; }
+QLineEdit, QComboBox, QSpinBox, QDateEdit { background: rgba(13,29,47,235); color: #eff4fb; padding: 8px 10px; border: 1px solid #3a526d; border-radius: 8px; selection-background-color: #8c654e; }
+QComboBox QAbstractItemView { background: #1c3049; selection-background-color: #5c493d; }
+QTableWidget { background: rgba(14,28,46,232); alternate-background-color: rgba(25,43,63,235); border: 1px solid rgba(191,215,243,42); border-radius: 12px; gridline-color: #2c3e54; selection-background-color: #5c493d; }
+QTableWidget::item { padding: 9px; border: none; }
+QTableWidget::item:selected { background: #624c3e; color: #ffffff; }
+QHeaderView { background: transparent; }
+QHeaderView::section { background: #22384f; color: #c5d6e9; padding: 11px; border: none; border-right: 1px solid #364b62; font-weight: 600; }
+QTextBrowser { background: rgba(14,28,46,230); border: 1px solid rgba(191,215,243,38); border-radius: 14px; padding: 16px; }
+QCheckBox { padding: 4px; color: #acbed2; }
+QStatusBar { color: #9fb0c7; background: #0b1524; font-size: 11px; }
+QScrollArea { background: transparent; border: none; }
+QScrollBar:vertical { background: rgba(12,25,42,90); width: 9px; margin: 0px; }
+QScrollBar::handle:vertical { background: #506782; border-radius: 4px; min-height: 25px; }
+QScrollBar:horizontal { background: #122338; height: 9px; }
+QScrollBar::handle:horizontal { background: #506782; border-radius: 4px; min-width: 25px; }
+QTabWidget::pane { border: none; padding-top: 10px; }
+QTabBar::tab { padding: 10px 16px; margin: 0px 4px 0px 0px; border-radius: 8px; background: rgba(23,42,63,230); color: #a8bad0; }
+QTabBar::tab:selected { color: #ffd1ae; background: #4a3c34; }
+QProgressBar { border: 1px solid #3c526b; border-radius: 6px; background: #142338; text-align: center; min-height: 17px; }
+QProgressBar::chunk { background: #b77c52; border-radius: 5px; }
+QMenu::item { padding: 8px 18px; }
+QMenu::item:selected { background: #4a3c34; }
+QToolTip { background: #203650; color: #f2e9df; border: 1px solid #64768d; padding: 8px; }
 '''

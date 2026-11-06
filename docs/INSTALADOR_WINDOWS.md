@@ -4,7 +4,7 @@ O instalador é gerado em Windows pelo GitHub Actions, usando Python 3.12.10 x64
 
 ## Para instalar e usar
 
-Quando a compilação terminar com sucesso, baixe o artefato **FORGEON-STUDIO-ERP-2.0.0-Windows-x64-Instalador** na execução da aba Actions do repositório. Extraia o ZIP do artefato e execute **ForgeonStudioERP-2.0.0-Windows-x64-Setup.exe**. O pacote pode também ser distribuído nos Assets de uma Release verificada pelo mantenedor. O ZIP de código-fonte do botão Code não é o instalador.
+Quando a compilação terminar com sucesso, baixe o artefato **FORGEON-STUDIO-ERP-Windows-x64-Instalador** na execução da aba Actions do repositório. Extraia o ZIP do artefato e execute **ForgeonStudioERP-2.0.1-Windows-x64-Setup.exe**. O pacote pode também ser distribuído nos Assets de uma Release verificada pelo mantenedor. O ZIP de código-fonte do botão Code não é o instalador.
 
 O instalador contém o interpretador Python e as bibliotecas necessárias. Você não precisa instalar Python ou executar comandos. Ele abre um assistente em português, instala apenas para sua conta e cria um atalho no menu Iniciar. O atalho na área de trabalho é opcional. Use o atalho **FORGEON STUDIO ERP 2.0** para abrir depois da instalação.
 
@@ -19,7 +19,7 @@ O `.bat` da raiz continua sendo apenas o lançador da versão em código-fonte, 
 
 ## Como a compilação é conferida
 
-O fluxo executa os testes no Windows, empacota o aplicativo em uma pasta com dependências e inclui o SQL do banco. Em seguida abre o executável empacotado em modo de verificação explícita, percorrendo as dez telas com banco temporário, cria/restaura um backup e verifica a integridade. Depois compila o instalador, instala-o no Windows descartável do CI e repete a verificação no executável instalado.
+O fluxo executa os testes no Windows, empacota o aplicativo em uma pasta com dependências e inclui o SQL do banco. Em seguida abre o executável empacotado em modo de verificação explícita, percorrendo as onze telas com banco temporário, cria/restaura um backup e verifica a integridade. Depois compila o instalador, instala-o no Windows descartável do CI e repete a verificação no executável instalado.
 
 A instalação automática sem interação existe somente para o teste no runner, e seus comandos são visíveis no YAML. A instalação no seu computador é pelo assistente normal. A verificação não acessa seu banco real e apaga os dados temporários após finalizar.
 
@@ -48,3 +48,7 @@ A verificação automatizada no Windows não substitui validação manual no Win
 ## Caso a integração não tenha permissão para criar workflows
 
 O modelo completo também está em `packaging/windows-installer.yml`. No GitHub, crie um arquivo `.github/workflows/windows-installer.yml` copiando esse modelo integralmente e confirme na branch `main`. A compilação começa com esse commit. Isso é necessário somente quando a conexão do aplicativo não tem a permissão especial de escrita em workflows.
+
+## Atualização 2.0.0 → 2.0.1
+
+O AppId e os diretórios permanecem os mesmos deste projeto ERP 2.0. O Setup substitui arquivos do aplicativo, incluindo ícone e recursos, sem remover a pasta de banco/backups. Não é necessário desinstalar. Faça backup e feche o aplicativo antes de iniciar o assistente. A aba Atualizações existe a partir da 2.0.1; ela baixa futuros instaladores, mas nunca os executa automaticamente.

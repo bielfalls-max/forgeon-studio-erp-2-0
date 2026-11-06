@@ -25,7 +25,7 @@ As versões estão fixadas em `requirements.txt` e `requirements-dev.txt`, inclu
 ## Controles implementados
 
 - Banco separado em `%LOCALAPPDATA%\ForgeonStudioERP2`, sem caminhos com nome fixo de usuário e sem tocar instalações anteriores.
-- Sem rede, telemetria, atualização automática, terminal embutido, IA, controle remoto ou automação de sites no aplicativo entregue.
+- Gestão local sem rede; a partir do HF01 há consulta/download HTTPS de atualizações, exclusivamente ao clicar, no repositório oficial. Sem telemetria, instalação automática, terminal embutido, IA, controle remoto ou automação de sites.
 - QLockFile impede duas instâncias deste aplicativo no mesmo banco. SQL parametrizado e transações explícitas.
 - Backup pela API SQLite, conferindo identidade, integridade e chaves estrangeiras. Restauração validada em cópia temporária local, com conferência do esquema exato, sem triggers nem views, e backup do banco atual antes de substituir.
 - XLSX limitado a 32 MB compactados, 128 MB de conteúdo, 4096 entradas, 256 colunas, 100 mil linhas e 2 milhões de células. Fórmulas são recusadas, inclusive nas colunas que não seriam importadas. Nenhuma macro é executada.
@@ -46,3 +46,7 @@ O banco não é criptografado. Permissões da conta Windows e backups em local c
 ## Empacotamento Windows acrescentado
 
 A compilação utiliza PyInstaller 6.16.0, hooks 2025.9, altgraph 0.17.4, setuptools 80.9.0, pefile 2023.2.7 e pywin32-ctypes 0.2.3, além das dependências já descritas, com versões fixadas em `requirements-build.txt`. O instalador Inno Setup 6 vem do runner Windows oficial do GitHub; sua versão é registrada nos logs da compilação. As bibliotecas incluídas mantêm suas licenças e metadados no pacote gerado pelo PyInstaller. Confira as condições de redistribuição do Qt/PySide6 antes de redistribuir. Nenhuma análise antivírus foi adicionada ao fluxo. Veja `INSTALADOR_WINDOWS.md`.
+
+## HF01 — rede opcional e recursos
+
+A consulta de atualizações usa `urllib`/TLS da biblioteca padrão, em thread separada e sem credenciais. Não envia arquivos, banco nem informações de compradores. URLs de instaladores são restritas ao repositório oficial, com HTTPS, limite de tamanho e redirecionamentos para distribuição GitHub. O download usa arquivo temporário e só substitui o destino após tamanho, assinatura MZ e SHA-256 coincidirem com os metadados da Release. Não há instalação ou execução automática. O SHA-256 não é assinatura digital de autoria. Os testes usam respostas sintéticas, falhas de hash, cancelamento e redirecionamentos indevidos. As imagens locais e seu ícone estão documentados em `forgeon/assets/ORIGEM_DOS_RECURSOS.md`; nenhuma função de IA foi adicionada ao aplicativo. QtCharts já pertence à dependência PySide6_Addons fixada.

@@ -37,7 +37,7 @@ jobs:
       - name: Obter instalador validado
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          name: FORGEON-STUDIO-ERP-2.0.0-Windows-x64-Instalador
+          name: FORGEON-STUDIO-ERP-Windows-x64-Instalador
           path: installer
           repository: ${{ github.repository }}
           run-id: ${{ inputs.build_run_id }}
@@ -51,21 +51,27 @@ jobs:
           run-id: ${{ inputs.build_run_id }}
           github-token: ${{ github.token }}
       - name: Conferir integridade e resultados antes de publicar
+        id: installer
         run: |
           python - <<'PY'
           from pathlib import Path
           from hashlib import sha256
           from xml.etree import ElementTree
-          import json
+          import json, re, os
           folder=Path('installer')
           digest,name=(folder/'SHA256.txt').read_text(encoding='utf-8-sig').strip().split(maxsplit=1)
-          assert name=='ForgeonStudioERP-2.0.0-Windows-x64-Setup.exe'
+          match=re.fullmatch(r'ForgeonStudioERP-(\d+\.\d+\.\d+)-Windows-x64-Setup\.exe',name)
+          assert match
+          version=match.group(1)
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:out.write('version='+version+'\n')
           exe=folder/name
           assert exe.read_bytes()[:2]==b'MZ'
           assert sha256(exe.read_bytes()).hexdigest()==digest
           for name in ('verificacao-executavel.json','verificacao-instalado.json'):
               result=json.loads((Path('evidence')/name).read_text())
-              assert result['ok'] and result['screens']==10 and not result['errors']
+              assert result['ok'] and result['screens']==11 and result['version']==version and not result['errors']
+          upgrade=json.loads(Path('evidence/verificacao-atualizacao.json').read_text(encoding='utf-8-sig'))
+          assert upgrade['to']==version and upgrade['database_unchanged'] and upgrade['backup_preserved']
           suites=ElementTree.parse('evidence/resultado-windows.xml').getroot()
           for suite in suites.iter('testsuite'):
               assert int(suite.get('tests'))>=51 and suite.get('failures')=='0' and suite.get('errors')=='0'
@@ -74,5 +80,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           BUILD_SHA: ${{ steps.build.outputs.sha }}
+          APP_VERSION: ${{ steps.installer.outputs.version }}
         run: |
-          gh release create v2.0.0 installer/ForgeonStudioERP-2.0.0-Windows-x64-Setup.exe installer/SHA256.txt evidence/resultado-windows.xml evidence/verificacao-executavel.json evidence/verificacao-instalado.json --repo "$GITHUB_REPOSITORY" --target "$BUILD_SHA" --title 'FORGEON STUDIO ERP 2.0 — Instalador Windows x64' --notes-file packaging/RELEASE_NOTES.md --prerelease
+          gh release create "v$APP_VERSION" "installer/ForgeonStudioERP-$APP_VERSION-Windows-x64-Setup.exe" installer/SHA256.txt evidence/resultado-windows.xml evidence/verificacao-executavel.json evidence/verificacao-instalado.json evidence/verificacao-atualizacao.json --repo "$GITHUB_REPOSITORY" --target "$BUILD_SHA" --title "FORGEON STUDIO ERP $APP_VERSION — HF01 Alpes" --notes-file packaging/RELEASE_NOTES.md --prerelease

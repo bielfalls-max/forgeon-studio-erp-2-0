@@ -1,15 +1,20 @@
-Instalador do FORGEON STUDIO ERP 2.0 para Windows 10/11 de 64 bits, com Python e bibliotecas incluídos. Não é necessário instalar Python separadamente.
+# HF01 · Alpes — FORGEON STUDIO ERP 2.0.1
 
-Baixe **ForgeonStudioERP-2.0.0-Windows-x64-Setup.exe** nos Assets e execute o assistente. Depois use o atalho **FORGEON STUDIO ERP 2.0** no menu Iniciar. Os arquivos Source code são apenas o código-fonte e não substituem o instalador.
+Baixe **ForgeonStudioERP-2.0.1-Windows-x64-Setup.exe** nos Assets. Faça backup em Configurações, feche o ERP e execute o Setup. Não precisa instalar Python, apagar banco nem desinstalar a versão 2.0.0.
 
-O aplicativo fica em `%LOCALAPPDATA%\Programs\ForgeonStudioERP2`. Banco e backups ficam em `%LOCALAPPDATA%\ForgeonStudioERP2`, separados dos arquivos do aplicativo. O uso normal é local, sem internet. Nenhum banco da empresa ou dado de comprador acompanha o instalador.
+- Novo tema de vidro fosco: painéis arredondados com reflexo, paisagem dos Alpes suíços e modo foco.
+- Ícone Forgeon com Banguela na janela, executável, instalador e atalhos.
+- Painel com indicadores e pendências, gráficos de vendas, custos, mais vendidos e consumo por cor/material.
+- Exportação PDF do relatório e PNG dos gráficos, além das planilhas XLSX.
+- Colunas ordenáveis, reorganizáveis e ocultáveis; cópia de linha e exportação das colunas visíveis.
+- Área Atualizações com versão instalada e histórico local de hotfixes.
+- Consulta e download dos próximos hotfixes somente por escolha do usuário, com progresso, cancelamento, backup prévio e SHA-256. O instalador nunca é executado automaticamente.
+- Mantém banco, backups e custos congelados do ERP 2.0.0. Nenhuma migração do esquema.
 
-Compilação reproduzível: scripts em `packaging/`, dependências fixadas em `requirements-build.txt`, fluxo na aba Actions. O arquivo SHA256.txt permite conferir a integridade do instalador; não é assinatura digital nem laudo antivírus.
+A 2.0.0 não possui o botão de atualização; instale este primeiro hotfix pelo Setup. Na 2.0.1, use Atualizações para consultar os próximos.
 
-Validação manual em computadores Windows 10/11, com os arquivos reais da empresa e suas configurações de tela, ainda é necessária. O executável não possui assinatura digital comercial. Não foram realizados laudo antivírus ou análise externa de segurança; testes funcionais não garantem ausência de alertas.
+As imagens são recursos locais, incluídos no instalador. O ícone é uma ilustração de fã solicitada pelo usuário, sem afiliação ou endosso à franquia. O aplicativo não inclui IA, geração de imagens, rastreamento ou atualização automática.
 
-Verificação realizada no Windows Server 2022 do GitHub Actions: **51 testes aprovados**, executável empacotado com dez telas aberto sem erros e instalação do Setup seguida de abertura das dez telas do aplicativo instalado. A verificação usa banco temporário, incluindo criação, backup, restauração e integridade, e não acessa banco de produção.
+As evidências anexadas a esta Release registram os testes, a atualização de 2.0.0 com banco e backup de teste preservados e as verificações reais do executável/instalador em Windows Server 2022 do GitHub Actions. A validação manual no seu computador Windows 10/11, com arquivos reais, continua necessária. O executável não tem assinatura digital comercial. Não foi realizado laudo antivírus; testes funcionais não garantem ausência de alertas.
 
-Evidências: `resultado-windows.xml`, `verificacao-executavel.json` e `verificacao-instalado.json`, anexados a esta release. Compilação: https://github.com/bielfalls-max/forgeon-studio-erp-2-0/actions/runs/42288155855 . O registro `docs/VALIDACAO.md` incluído no instalador é o registro histórico da primeira entrega em fontes; os arquivos desta release registram a etapa posterior de compilação e teste Windows.
-
-Esta é uma prévia instalável para validação manual; não há alegação de homologação interativa em todos os computadores Windows 10/11.
+`SHA256.txt` permite conferir a integridade do instalador. Banco e backups ficam em `%LOCALAPPDATA%\ForgeonStudioERP2`, separados da instalação. Se o Defender bloquear, não desative a proteção nem crie exceções.

@@ -36,6 +36,11 @@ jobs:
           $scripts | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           & "$scripts\python.exe" -m pip install -r requirements-build.txt
           if ($LASTEXITCODE -ne 0) { throw 'Instalação das dependências falhou' }
+      - name: Ler versão do hotfix
+        shell: pwsh
+        run: |
+          $version = python -c "from forgeon.version import VERSION; print(VERSION)"
+          "APP_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - name: Verificar dependências e testes no Windows
         shell: pwsh
         run: |
@@ -53,7 +58,7 @@ jobs:
           $process = Start-Process -FilePath $exe -ArgumentList @('--verificar-instalacao', $report) -Wait -PassThru
           if ($process.ExitCode -ne 0 -or !(Test-Path $report)) { throw 'Executável não abriu corretamente' }
           $result = Get-Content $report -Raw | ConvertFrom-Json
-          if (!$result.ok -or $result.screens -ne 10) { throw 'Verificação de telas falhou' }
+          if (!$result.ok -or $result.screens -ne 11) { throw 'Verificação de telas falhou' }
       - name: Compilar instalador Inno Setup disponível no runner
         shell: pwsh
         run: |
@@ -64,26 +69,45 @@ jobs:
       - name: Instalar e verificar no Windows do CI
         shell: pwsh
         run: |
-          $setup = Join-Path $PWD 'dist\installer\ForgeonStudioERP-2.0.0-Windows-x64-Setup.exe'
+          $setup = Join-Path $PWD "dist\installer\ForgeonStudioERP-$env:APP_VERSION-Windows-x64-Setup.exe"
           $target = Join-Path $env:RUNNER_TEMP 'Forgeon-installed'
+          # Instala a entrega anterior deste mesmo projeto para testar o hotfix real.
+          $oldSetup = Join-Path $env:RUNNER_TEMP 'Forgeon-2.0.0-Setup.exe'
+          Invoke-WebRequest -Uri 'https://github.com/bielfalls-max/forgeon-studio-erp-2-0/releases/download/v2.0.0/ForgeonStudioERP-2.0.0-Windows-x64-Setup.exe' -OutFile $oldSetup
+          $oldHash = (Get-FileHash -Algorithm SHA256 $oldSetup).Hash.ToLower()
+          if ($oldHash -ne '65996f45ed315ca1419ae9f92d250f229a56fb4a65439171bc6394c3f3ab86a3') { throw 'Instalador base não corresponde à entrega verificada' }
+          $old = Start-Process -FilePath $oldSetup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',"/DIR=$target") -Wait -PassThru
+          if ($old.ExitCode -ne 0) { throw 'Instalação base do teste de atualização falhou' }
+          $env:LOCALAPPDATA = Join-Path $env:RUNNER_TEMP 'Forgeon-data-preserve'
+          New-Item -ItemType Directory -Path $env:LOCALAPPDATA -Force | Out-Null
+          python -c "from forgeon.db.store import Store,data_directory; from forgeon.business.service import ERP; s=Store(data_directory()/'forgeon2.sqlite3'); e=ERP(s); e.save_product({'name':'PRODUTO DE TESTE DE PRESERVACAO','weight':'100','hours':'2'}); s.backup(); s.close()"
+          if ($LASTEXITCODE -ne 0) { throw 'Preparação dos dados de teste falhou' }
+          $database = Join-Path $env:LOCALAPPDATA 'ForgeonStudioERP2\forgeon2.sqlite3'
+          $before = (Get-FileHash -Algorithm SHA256 $database).Hash
           $process = Start-Process -FilePath $setup -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',"/DIR=$target") -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw 'Instalação de teste falhou' }
+          $after = (Get-FileHash -Algorithm SHA256 $database).Hash
+          if ($before -ne $after) { throw 'Banco foi alterado pela instalação do hotfix' }
+          python -c "from forgeon.db.store import Store,data_directory; s=Store(data_directory()/'forgeon2.sqlite3'); s.validate(s.db); assert s.one('SELECT name FROM products')['name']=='PRODUTO DE TESTE DE PRESERVACAO'; assert list((data_directory()/'backups').glob('*.sqlite3')); s.close()"
+          if ($LASTEXITCODE -ne 0) { throw 'Dados e backup não foram preservados' }
+          @{from='2.0.0';to=$env:APP_VERSION;database_unchanged=$true;backup_preserved=$true} | ConvertTo-Json | Set-Content -Encoding utf8 'verificacao-atualizacao.json'
+
           $exe = Join-Path $target 'ForgeonStudioERP.exe'
           $report = Join-Path $PWD 'verificacao-instalado.json'
           $process = Start-Process -FilePath $exe -ArgumentList @('--verificar-instalacao', $report) -Wait -PassThru
           if ($process.ExitCode -ne 0 -or !(Test-Path $report)) { throw 'Aplicativo instalado falhou' }
           $result = Get-Content $report -Raw | ConvertFrom-Json
-          if (!$result.ok -or $result.screens -ne 10) { throw 'Aplicativo instalado não abriu as dez telas' }
+          if (!$result.ok -or $result.screens -ne 11) { throw 'Aplicativo instalado não abriu as onze telas' }
       - name: Gerar SHA-256 do instalador
         shell: pwsh
         run: |
-          $setup = 'dist\installer\ForgeonStudioERP-2.0.0-Windows-x64-Setup.exe'
+          $setup = "dist\installer\ForgeonStudioERP-$env:APP_VERSION-Windows-x64-Setup.exe"
           $hash = (Get-FileHash -Algorithm SHA256 $setup).Hash.ToLower()
-          "$hash  ForgeonStudioERP-2.0.0-Windows-x64-Setup.exe" | Set-Content -Encoding utf8 'dist\installer\SHA256.txt'
+          "$hash  ForgeonStudioERP-$env:APP_VERSION-Windows-x64-Setup.exe" | Set-Content -Encoding utf8 'dist\installer\SHA256.txt'
       - name: Guardar instalador pronto
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: FORGEON-STUDIO-ERP-2.0.0-Windows-x64-Instalador
+          name: FORGEON-STUDIO-ERP-Windows-x64-Instalador
           path: dist/installer/*
           if-no-files-found: error
           retention-days: 30

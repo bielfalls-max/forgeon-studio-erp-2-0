@@ -16,7 +16,7 @@ a = Analysis(
     [str(root / 'forgeon_launcher.py')],
     pathex=[str(root)],
     binaries=[],
-    datas=[(str(root / 'forgeon' / 'db' / 'schema.sql'), 'forgeon/db')] + metadata + licenses,
+    datas=[(str(root / 'forgeon' / 'db' / 'schema.sql'), 'forgeon/db'),(str(root / 'forgeon' / 'assets'), 'forgeon/assets')] + metadata + licenses,
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -29,6 +29,8 @@ pyz = PYZ(a.pure)
 exe = EXE(
     pyz, a.scripts, [], exclude_binaries=True,
     name='ForgeonStudioERP', debug=False, bootloader_ignore_signals=False,
+    icon=str(root / 'forgeon' / 'assets' / 'forgeon.ico'),
+    version=str(root / 'packaging' / 'version-info.txt'),
     strip=False, upx=False, console=False, disable_windowed_traceback=False,
 )
 coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name='ForgeonStudioERP')

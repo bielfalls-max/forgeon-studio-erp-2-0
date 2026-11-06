@@ -1,6 +1,6 @@
 ; Compilar a partir da raiz usando ISCC packaging\ForgeonStudioERP.iss
 ; Instalador local por usuário. Não inclui banco e não toca instalações anteriores.
-#define AppVersion "2.0.0"
+#define AppVersion "2.0.1"
 #define ProjectRoot ".."
 
 [Setup]
@@ -25,7 +25,8 @@ UninstallDisplayIcon={app}\ForgeonStudioERP.exe
 SetupLogging=yes
 CloseApplications=yes
 RestartApplications=no
-VersionInfoVersion=2.0.0.0
+VersionInfoVersion=2.0.1.0
+SetupIconFile={#ProjectRoot}\forgeon\assets\forgeon.ico
 
 [Languages]
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"

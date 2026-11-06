@@ -4,11 +4,13 @@ from PySide6.QtCore import QLockFile,QLocale
 from .db.store import Store,data_directory
 from .business.service import ERP
 from .ui.main import MainWindow
+from .ui.visual import app_icon
+from .version import VERSION
 
 
 def main():
     app=QApplication(sys.argv)
-    app.setApplicationName('FORGEON STUDIO ERP 2.0')
+    app.setApplicationName('FORGEON STUDIO ERP 2.0');app.setApplicationVersion(VERSION);app.setWindowIcon(app_icon())
     app.setOrganizationName('ForgeonStudioERP2')
     QLocale.setDefault(QLocale(QLocale.Language.Portuguese,QLocale.Country.Brazil))
     folder=data_directory(); folder.mkdir(parents=True,exist_ok=True)
