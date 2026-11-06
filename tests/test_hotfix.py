@@ -61,3 +61,15 @@ def test_hotfix_versions_and_resources_agree():
     assert f'#define AppVersion "{VERSION}"' in (root/'packaging/ForgeonStudioERP.iss').read_text()
     assert (ASSETS/'forgeon.ico').read_bytes()[:4]==b'\x00\x00\x01\x00'
     assert (ASSETS/'swiss-alps.png').is_file()
+
+
+def test_chart_exports_real_png(app,tmp_path,monkeypatch):
+    from forgeon.ui.charts import ChartCard
+    from PySide6.QtGui import QImage
+    target=tmp_path/'grafico.png'
+    monkeypatch.setattr(QFileDialog,'getSaveFileName',lambda *a,**k:(str(target),'PNG'))
+    chart=ChartCard('Vendas do período','Dados de teste');chart.resize(640,330)
+    chart.line([{'date':'2026-11-01','gross_cents':10000},{'date':'2026-11-06','gross_cents':25000}]);chart.show();app.processEvents();chart.save_png()
+    assert not QImage(str(target)).isNull()
+    assert target.stat().st_size>1000
+    chart.close()

@@ -11,6 +11,7 @@ FORGEON_STUDIO_ERP_2_0/
   docs/INSTALADOR_WINDOWS.md
   docs/REGRAS_FINANCEIRAS.md
   docs/VALIDACAO.md
+  docs/imagens/hf01-painel.png
   docs/resultado_pytest.txt
   forgeon/__init__.py
   forgeon/__main__.py

@@ -19,7 +19,7 @@ class UpdateTask(QThread):
             self.done.emit(result)
         except Exception as error:
             from urllib.error import URLError,HTTPError
-            message='Não foi possível acessar o GitHub. Verifique sua conexão e tente novamente.' if isinstance(error,(URLError,TimeoutError,OSError)) else str(error)
+            message='Não foi possível acessar o GitHub. Verifique sua conexão e tente novamente.' if isinstance(error,(URLError,TimeoutError)) else ('Não foi possível concluir a operação. Verifique a conexão, a permissão da pasta e o espaço em disco.' if isinstance(error,OSError) else str(error))
             self.failed.emit(message)
 
 

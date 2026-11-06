@@ -45,6 +45,10 @@ Os wheels de Linux não servem para instalar PySide6 no Windows. A pasta de depe
 
 Tema de vidro fosco com Alpes suíços e ícone do Banguela, indicadores em cartões, gráficos, relatórios PDF/PNG, colunas organizáveis e área Atualizações com histórico. Consulte [Hotfixes e atualização manual](docs/HOTFIXES.md). Para a primeira atualização a partir da 2.0.0, baixe o Setup 2.0.1. Os próximos hotfixes podem ser consultados e baixados no aplicativo; a instalação permanece manual.
 
+### Visual do HF01
+
+![Painel HF01 com banco vazio](docs/imagens/hf01-painel.png)
+
 ## Primeiro uso
 
 1. Em **Configurações**, revise energia, potência, máquina, margem/acréscimo e taxas. Taxas iniciais zero não representam condições garantidas da Shopee.
