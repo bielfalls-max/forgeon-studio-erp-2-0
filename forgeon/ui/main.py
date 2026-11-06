@@ -684,7 +684,7 @@ class MainWindow(QMainWindow):
         path,_=QFileDialog.getSaveFileName(self,'Exportar relatório PDF','relatorio-forgeon.pdf','Documento PDF (*.pdf)')
         if not path:return
         document=QTextDocument();document.setDefaultFont(QFont('Segoe UI',10))
-        html_text=f"<h1>FORGEON STUDIO · Relatório gerencial</h1><p>Versão {VERSION} · {text(r['start'])} a {text(r['end'])}</p><p>Produto: {text(self.report_product.currentText())} · Status: {text(self.report_status.currentText())}</p><h2>{'DADOS PARCIAIS' if r['partial'] else 'Fontes conciliadas no período'}</h2>"
+        html_text=f"<h1>FORGEON STUDIO · Relatório gerencial</h1><p>Versão {VERSION} · {date.fromisoformat(r['start']).strftime('%d/%m/%Y')} a {date.fromisoformat(r['end']).strftime('%d/%m/%Y')}</p><p>Produto: {text(self.report_product.currentText())} · Status: {text(self.report_status.currentText())}</p><h2>{'DADOS PARCIAIS' if r['partial'] else 'Fontes conciliadas no período'}</h2>"
         html_text+='<table width="100%" border="0" cellspacing="8">'
         for key,label in [('gross_cents','Vendas brutas'),('refunds_cents','Reembolsos'),('fees_cents','Taxas'),('production_cents','Produção congelada'),('expenses_cents','Despesas'),('operating_cents','Resultado operacional'),('cash_cents','Caixa estimado')]:
             html_text+=f'<tr><td>{label}</td><td>{money(r[key])}</td></tr>'
