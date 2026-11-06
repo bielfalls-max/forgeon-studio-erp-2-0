@@ -1,4 +1,6 @@
-# Validação realizada e pendências
+# Validação inicial em fontes e pendências
+
+> Este primeiro registro documenta a entrega original em código-fonte. A etapa posterior de instalador e testes nativos está registrada ao fim desta página.
 
 Data da execução: 06/11/2026. Ambiente Linux x86_64, Python 3.12.14, SQLite 3.53.1 e PySide6 6.8.3. Não foi utilizado Windows nesta execução.
 
@@ -49,3 +51,10 @@ Não foram executados análise antivírus, Microsoft Defender, assinatura de bin
 ## Verificação sugerida após instalar
 
 Use primeiro um banco de teste separado por conta Windows ou faça backup do banco vazio. Cadastre dois produtos distintos, vincule dois anúncios ao mesmo produto e um anúncio a outro produto; gere um conflito de SKU para conferir o destaque vermelho. Importe um pedido com dois itens, repita a importação e importe outro arquivo contendo apenas um dos IDs. Confira preservação do restante. Simule cancelamento e devolução, compare relatórios e teste restaurar um backup. Mantenha cópia dos arquivos de entrada para conciliação; o aplicativo não copia a planilha original para o banco.
+
+
+## Etapa posterior: instalador Windows
+
+Em 06/11/2026, a compilação [42288155855](https://github.com/bielfalls-max/forgeon-studio-erp-2-0/actions/runs/42288155855) passou em Windows Server 2022, Python 3.12.10 x64: **51 testes aprovados, zero falhas ou erros**. O executável PyInstaller abriu as dez telas e verificou criação, backup, restauração e integridade em banco temporário. O instalador Inno Setup foi compilado, instalado no runner e o aplicativo instalado passou novamente na verificação das dez telas. Os relatórios XML/JSON acompanham a Release.
+
+Esses testes não são homologação interativa em computadores Windows 10/11 nem análise antivírus. Arquivos reais, escalas de tela, hardware e permissões do usuário ainda dependem de validação manual. O registro anterior de 49 testes permanece como histórico da primeira entrega. O `.bat` continua sendo somente o lançador dos fontes; para a versão instalada use o atalho criado pelo Setup. Consulte `INSTALADOR_WINDOWS.md`.

@@ -2,7 +2,7 @@
 
 Aplicativo desktop local para gestão de pequena empresa de impressão 3D. Projeto criado do zero em Python 3.12, PySide6/Qt Widgets e SQLite. Interface em português, tema escuro e dados persistentes. O banco de produção é criado vazio no primeiro uso. Nenhum arquivo de versões antigas é necessário ou reutilizado.
 
-**Versão instalável para Windows:** veja [Instalador Windows](docs/INSTALADOR_WINDOWS.md). O instalador inclui Python e bibliotecas; o ZIP do botão Code contém apenas os fontes. A compilação e os testes nativos são feitos pelo fluxo **Instalador Windows**, na aba Actions. O instalador só está disponível após uma execução bem-sucedida.
+**Versão instalável para Windows:** baixe o arquivo `ForgeonStudioERP-2.0.0-Windows-x64-Setup.exe` na [página de versões](https://github.com/bielfalls-max/forgeon-studio-erp-2-0/releases/tag/v2.0.0). Veja também [Instalador Windows](docs/INSTALADOR_WINDOWS.md). O instalador inclui Python e bibliotecas; o ZIP do botão Code contém apenas os fontes. A compilação e os testes nativos são feitos pelo fluxo **Instalador Windows**, na aba Actions. O instalador só está disponível após uma execução bem-sucedida.
 
 As instruções abaixo são para executar **a versão em código-fonte**, criando um ambiente Python isolado. Ela não modifica a instalação antiga do Forgeon.
 

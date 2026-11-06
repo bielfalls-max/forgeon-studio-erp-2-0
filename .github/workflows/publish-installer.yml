@@ -1,0 +1,78 @@
+name: Publicar instalador verificado
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: ID da compilação Windows concluída com sucesso
+        type: string
+        required: true
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Conferir origem da compilação
+        id: build
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN: ${{ inputs.build_run_id }}
+        run: |
+          gh api "repos/$GITHUB_REPOSITORY/actions/runs/$BUILD_RUN" > build-run.json
+          python - <<'PY'
+          import json, os
+          data=json.load(open('build-run.json'))
+          assert data['conclusion']=='success' and data['head_branch']=='main'
+          assert data['path']=='.github/workflows/windows-installer.yml'
+          assert data['head_repository']['full_name']==os.environ['GITHUB_REPOSITORY']
+          with open(os.environ['GITHUB_OUTPUT'],'a') as out:
+              out.write('sha='+data['head_sha']+'\n')
+          PY
+      - name: Obter instalador validado
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: FORGEON-STUDIO-ERP-2.0.0-Windows-x64-Instalador
+          path: installer
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+      - name: Obter evidências de testes
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: validacao-windows
+          path: evidence
+          repository: ${{ github.repository }}
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+      - name: Conferir integridade e resultados antes de publicar
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          from hashlib import sha256
+          from xml.etree import ElementTree
+          import json
+          folder=Path('installer')
+          digest,name=(folder/'SHA256.txt').read_text(encoding='utf-8-sig').strip().split(maxsplit=1)
+          assert name=='ForgeonStudioERP-2.0.0-Windows-x64-Setup.exe'
+          exe=folder/name
+          assert exe.read_bytes()[:2]==b'MZ'
+          assert sha256(exe.read_bytes()).hexdigest()==digest
+          for name in ('verificacao-executavel.json','verificacao-instalado.json'):
+              result=json.loads((Path('evidence')/name).read_text())
+              assert result['ok'] and result['screens']==10 and not result['errors']
+          suites=ElementTree.parse('evidence/resultado-windows.xml').getroot()
+          for suite in suites.iter('testsuite'):
+              assert int(suite.get('tests'))>=51 and suite.get('failures')=='0' and suite.get('errors')=='0'
+          PY
+      - name: Publicar prévia instalável com evidências
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_SHA: ${{ steps.build.outputs.sha }}
+        run: |
+          gh release create v2.0.0 installer/ForgeonStudioERP-2.0.0-Windows-x64-Setup.exe installer/SHA256.txt evidence/resultado-windows.xml evidence/verificacao-executavel.json evidence/verificacao-instalado.json --repo "$GITHUB_REPOSITORY" --target "$BUILD_SHA" --title 'FORGEON STUDIO ERP 2.0 — Instalador Windows x64' --notes-file packaging/RELEASE_NOTES.md --prerelease

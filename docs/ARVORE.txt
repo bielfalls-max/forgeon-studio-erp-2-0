@@ -1,4 +1,5 @@
 FORGEON_STUDIO_ERP_2_0/
+  .github/workflows/publish-installer.yml
   .github/workflows/windows-installer.yml
   .gitignore
   README.md
@@ -39,6 +40,7 @@ FORGEON_STUDIO_ERP_2_0/
   modelos/modelo_produtos.xlsx
   packaging/ForgeonStudioERP.iss
   packaging/ForgeonStudioERP.spec
+  packaging/RELEASE_NOTES.md
   packaging/licenses/GPL-3.0.txt
   packaging/licenses/LEIA-ME.md
   packaging/licenses/LGPL-3.0.txt
