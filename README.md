@@ -99,4 +99,4 @@ O modo `offscreen` permite testar a abertura das telas sem mostrá-las. Para uso
 - [Dependências, origem e segurança](docs/DEPENDENCIAS_E_SEGURANCA.md)
 - [Validação e pendências no Windows](docs/VALIDACAO.md)
 
-O código foi autorizado para publicação em repositório privado no GitHub. Não houve publicação de site nem envio para análise antivírus externa. Reescrever não garante ausência de ameaças; resultados de testes funcionais não são laudo antivírus.
+O código foi autorizado para publicação em repositório público no GitHub: https://github.com/bielfalls-max/forgeon-studio-erp-2-0 . Não houve publicação de site nem envio para análise antivírus externa. Reescrever não garante ausência de ameaças; resultados de testes funcionais não são laudo antivírus.
