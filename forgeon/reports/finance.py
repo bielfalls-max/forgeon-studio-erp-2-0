@@ -57,7 +57,7 @@ def report(erp, start, end, product_id=None, status=''):
             'buyer_shipping_cents':financial.get('buyer_shipping_cents'), 'buyer_total_cents':financial.get('buyer_total_cents'),'market_total_cents':financial.get('market_total_cents')})
         order_grams=Decimal(0);order_hours=Decimal(0);order_cost=0;order_unknown=0;known_usage=False;known_time=False
         for i in picked:
-            product_label=i['product_name'] or f"Não vinculado: {i['title']} / {i['variation']}"
+            product_label=i['product_name'] or f"{i['variation'] or i['title']} · sem receita ({i['title']})"
             sold[product_label]['qty']+=i['qty'];sold[product_label]['revenue_cents']+=i['qty']*i['unit_cents']
             detail=json.loads(i.get('usage_detail') or i.get('cost_detail') or '{}')
             grams=Decimal(detail.get('grams','0'));hours=Decimal(detail.get('hours','0'))
@@ -73,7 +73,7 @@ def report(erp, start, end, product_id=None, status=''):
                     consumption[(o['date'][:7], '1ª quinzena' if int(o['date'][8:10])<=15 else '2ª quinzena',c['material'],c['color'])]+=Decimal(c['grams'])*i['qty']
             if known_hours:known_time=True;order_hours+=hours*i['qty'];total_hours+=hours*i['qty']
             else:unknown_time_units+=i['qty']
-            usage_items.append({'order_id':o['id'],'date':o['date'],'status':o['status'],'product':product_label,'original_sku':i['original_sku'],'qty':i['qty'],
+            usage_items.append({'order_id':o['id'],'date':o['date'],'status':o['status'],'product':product_label,'variation':i['variation'],'listing':i['title'],'original_sku':i['original_sku'],'qty':i['qty'],
                 'unit_grams':str(grams) if known_grams else None,'grams':str(grams*i['qty']) if known_grams else None,
                 'unit_hours':str(hours) if known_hours else None,'hours':str(hours*i['qty']) if known_hours else None,
                 'cost_cents':i['cost_cents'],'production_cents':i['cost_cents']*i['qty'] if i['cost_cents'] is not None else None,

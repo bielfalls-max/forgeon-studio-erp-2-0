@@ -74,6 +74,7 @@ def test_exact_variation_joins_recipe_without_hiding_sku_conflict(erp,tmp_path):
     r=report(erp,'01/01/2026','31/01/2026')
     assert r['gross_cents']==3000 and r['fees_cents']==800
     assert r['usage_total_grams']=='42' and r['usage_total_hours']=='12'
+    assert any(i['variation']=='Outra Figura' and i['unit_grams'] is None for i in r['usage_items'])
     assert r['unknown_usage_units']==1 and r['planned_grams']=='42' and r['sent_grams']=='0'
     assert erp.match_product('Anúncio Figura Exemplo','Outra Figura') is None
     assert erp.match_product('Anúncio Figura Exemplo','Figura Exemplo Preto') is None
