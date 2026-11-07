@@ -31,7 +31,7 @@ def norm(value):
 def day(value):
     if isinstance(value, (date, datetime)):
         return value.strftime('%Y-%m-%d')
-    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%Y-%m-%d %H:%M:%S', '%d/%m/%Y %H:%M', '%d/%m/%Y %H:%M:%S'):
+    for fmt in ('%Y-%m-%d', '%d/%m/%Y', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M', '%d/%m/%Y %H:%M', '%d/%m/%Y %H:%M:%S'):
         try:
             return datetime.strptime(str(value).strip(), fmt).strftime('%Y-%m-%d')
         except ValueError:

@@ -1,8 +1,13 @@
 from collections import defaultdict
 from decimal import Decimal
 import json
-from ..business.numbers import day
+from ..business.numbers import day,norm
 from ..importers.sheets import status_kind
+
+
+def rounded_money(n):
+    from decimal import ROUND_HALF_UP
+    return int(Decimal(n).quantize(Decimal('1'),rounding=ROUND_HALF_UP))
 
 
 def report(erp, start, end, product_id=None, status=''):
@@ -10,7 +15,7 @@ def report(erp, start, end, product_id=None, status=''):
     if end < start:
         raise ValueError('Período inválido.')
     s = erp.s
-    orders = s.rows('SELECT * FROM orders WHERE date BETWEEN ? AND ? ORDER BY date,id',(start,end))
+    orders = s.rows('SELECT o.*,f.detail financial_detail FROM orders o LEFT JOIN order_financials f ON f.order_id=o.id WHERE date BETWEEN ? AND ? ORDER BY date,id',(start,end))
     gross = fees = refunds = production = 0
     pending = 0
     partial = False
@@ -18,10 +23,12 @@ def report(erp, start, end, product_id=None, status=''):
     sold = defaultdict(lambda: {'qty':0,'revenue_cents':0})
     consumption = defaultdict(Decimal)
     daily = defaultdict(Decimal)
+    usage_orders=[];usage_items=[];financial_rows=[]
+    total_grams=Decimal(0);total_hours=Decimal(0);planned_grams=Decimal(0);sent_grams=Decimal(0);unknown_units=0;unknown_time_units=0
     for o in orders:
         if status and status_kind(o['status']) != status:
             continue
-        items = s.rows('SELECT i.*,p.name product_name FROM order_items i LEFT JOIN products p ON p.id=i.product_id WHERE order_id=?',(o['id'],))
+        items = s.rows('SELECT i.*,p.name product_name,u.detail usage_detail,u.recorded usage_at FROM order_items i LEFT JOIN products p ON p.id=i.product_id LEFT JOIN item_usage u ON u.item_id=i.id WHERE order_id=?',(o['id'],))
         picked = [i for i in items if product_id is None or i['product_id'] == product_id]
         if not picked:
             continue
@@ -41,20 +48,41 @@ def report(erp, start, end, product_id=None, status=''):
         refunds += Decimal(o['refund_cents']) * share
         if kind == 'devolucao' and o['refund_cents'] == 0:
             partial = True
+        financial=json.loads(o.get('financial_detail') or '{}')
+        if financial.get('returned_qty') or financial.get('return_status'):partial=True
+        financial_rows.append({'id':o['id'],'date':o['date'],'status':o['status'],'gross_cents':rounded_money(Decimal(o['gross_cents'])*share),
+            'commission_cents':rounded_money(Decimal(financial.get('commission_cents',0))*share),'service_cents':rounded_money(Decimal(financial.get('service_cents',0))*share),
+            'transaction_cents':rounded_money(Decimal(financial.get('transaction_cents',0))*share),'fees_cents':rounded_money(Decimal(o['fees_cents'])*share),
+            'net_cents':rounded_money(Decimal(o['gross_cents']-o['fees_cents']-o['refund_cents'])*share),
+            'buyer_shipping_cents':financial.get('buyer_shipping_cents'), 'buyer_total_cents':financial.get('buyer_total_cents'),'market_total_cents':financial.get('market_total_cents')})
+        order_grams=Decimal(0);order_hours=Decimal(0);order_cost=0;order_unknown=0;known_usage=False;known_time=False
         for i in picked:
-            sold[i['product_name'] or f"Não vinculado: {i['title']} / {i['variation']}"]['qty'] += i['qty']
-            sold[i['product_name'] or f"Não vinculado: {i['title']} / {i['variation']}"]['revenue_cents'] += i['qty']*i['unit_cents']
-            if i['cost_cents'] is None:
-                pending += 1
-                partial = True
-                continue
-            production += i['cost_cents']*i['qty']
-            detail = json.loads(i['cost_detail'])
-            # Material quantities remain physical consumption even when a manual manufacturing cost is used.
-            if not detail['colors'] and Decimal(detail['grams']) > 0:
-                consumption[(o['date'][:7], '1ª quinzena' if int(o['date'][8:10])<=15 else '2ª quinzena', 'Não especificado', 'Sem cor')] += Decimal(detail['grams'])*i['qty']
-            for c in detail['colors']:
-                consumption[(o['date'][:7], '1ª quinzena' if int(o['date'][8:10])<=15 else '2ª quinzena', c['material'], c['color'])] += Decimal(c['grams'])*i['qty']
+            product_label=i['product_name'] or f"Não vinculado: {i['title']} / {i['variation']}"
+            sold[product_label]['qty']+=i['qty'];sold[product_label]['revenue_cents']+=i['qty']*i['unit_cents']
+            detail=json.loads(i.get('usage_detail') or i.get('cost_detail') or '{}')
+            grams=Decimal(detail.get('grams','0'));hours=Decimal(detail.get('hours','0'))
+            known_grams=grams>0;known_hours=hours>0
+            if not known_grams:unknown_units+=i['qty'];order_unknown+=i['qty'];partial=True
+            else:
+                known_usage=True;order_grams+=grams*i['qty'];total_grams+=grams*i['qty']
+                if kind=='devolucao' or any(word in norm(o['status']) for word in ('enviado','entregue','conclu','complet','shipped','deliver')):sent_grams+=grams*i['qty']
+                else:planned_grams+=grams*i['qty']
+                if not detail.get('colors'):
+                    consumption[(o['date'][:7], '1ª quinzena' if int(o['date'][8:10])<=15 else '2ª quinzena','Não especificado','Sem cor')]+=grams*i['qty']
+                for c in detail.get('colors',[]):
+                    consumption[(o['date'][:7], '1ª quinzena' if int(o['date'][8:10])<=15 else '2ª quinzena',c['material'],c['color'])]+=Decimal(c['grams'])*i['qty']
+            if known_hours:known_time=True;order_hours+=hours*i['qty'];total_hours+=hours*i['qty']
+            else:unknown_time_units+=i['qty']
+            usage_items.append({'order_id':o['id'],'date':o['date'],'status':o['status'],'product':product_label,'original_sku':i['original_sku'],'qty':i['qty'],
+                'unit_grams':str(grams) if known_grams else None,'grams':str(grams*i['qty']) if known_grams else None,
+                'unit_hours':str(hours) if known_hours else None,'hours':str(hours*i['qty']) if known_hours else None,
+                'cost_cents':i['cost_cents'],'production_cents':i['cost_cents']*i['qty'] if i['cost_cents'] is not None else None,
+                'snapshot_at':i.get('usage_at') or i.get('cost_at'),'partial':not known_grams or not known_hours or i['cost_cents'] is None})
+            if i['cost_cents'] is None:pending+=1;partial=True
+            else:production+=i['cost_cents']*i['qty'];order_cost+=i['cost_cents']*i['qty']
+        usage_orders.append({'order_id':o['id'],'date':o['date'],'status':o['status'],'qty':sum(i['qty'] for i in picked),
+            'grams':str(order_grams) if known_usage else None,'hours':str(order_hours) if known_time else None,'production_cents':order_cost if any(item['cost_cents'] is not None for item in picked) else None,
+            'unknown_units':order_unknown,'partial':bool(order_unknown or any(i['cost_cents'] is None for i in picked))})
     expenses = s.rows('SELECT * FROM expenses WHERE date BETWEEN ? AND ? ORDER BY date',(start,end))
     purchases = s.rows('SELECT b.*,f.material,f.color FROM purchases b JOIN filaments f ON f.id=b.filament_id WHERE date BETWEEN ? AND ? ORDER BY date',(start,end))
     expense_total = sum(e['amount_cents'] for e in expenses)
@@ -69,6 +97,7 @@ def report(erp, start, end, product_id=None, status=''):
     # Stats are comparison only. They NEVER enter revenue or profits.
     if stats and abs(Decimal(stat_total)-Decimal(gross)) > 1:
         partial = True
+    partial |= unknown_time_units>0
     def rounded(n):
         from decimal import ROUND_HALF_UP
         return int(Decimal(n).quantize(Decimal('1'),rounding=ROUND_HALF_UP))
@@ -78,6 +107,8 @@ def report(erp, start, end, product_id=None, status=''):
             'operating_cents':rounded(gross-fees-refunds-production-expense_total),
             'cash_cents':rounded(gross-fees-refunds-expense_total-purchase_total),
             'stats_cents':stat_total,'difference_cents':rounded(Decimal(stat_total)-Decimal(gross)),
+            'usage_total_grams':str(total_grams),'usage_total_hours':str(total_hours),'planned_grams':str(planned_grams),'sent_grams':str(sent_grams),
+            'unknown_usage_units':unknown_units,'unknown_time_units':unknown_time_units,'usage_orders':usage_orders,'usage_items':usage_items,'financial_rows':financial_rows,
             'sales_by_day':[{'date':date,'gross_cents':rounded(value)} for date,value in sorted(daily.items())],
             'best_sellers':[{'product':k,**v} for k,v in sorted(sold.items(),key=lambda kv:-kv[1]['qty'])],
             'consumption':[{'month':k[0],'fortnight':k[1],'material':k[2],'color':k[3],'grams':str(v)} for k,v in sorted(consumption.items())],

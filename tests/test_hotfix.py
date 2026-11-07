@@ -29,7 +29,7 @@ def test_dashboard_and_reports_never_fetch_updates_on_open(app,erp,monkeypatch):
     monkeypatch.setattr(OpenerDirector,'open',forbidden)
     w=MainWindow(erp)
     for i in range(11):w.nav.setCurrentRow(i);app.processEvents()
-    assert '2.0.1' in w.updates_page.notes.toPlainText()
+    assert '2.0.2' in w.updates_page.notes.toPlainText()
     assert not w.updates_page.download_button.isEnabled()
     assert w.updates_page.task is None
     w.focus_toggle.setChecked(True)
@@ -61,7 +61,7 @@ def test_daily_series_excludes_cancelled_and_matches_report(erp,product):
 def test_hotfix_versions_and_resources_agree():
     from forgeon.version import VERSION
     root=Path(__file__).resolve().parent.parent
-    assert VERSION=='2.0.1'
+    assert VERSION=='2.0.2'
     assert f'#define AppVersion "{VERSION}"' in (root/'packaging/ForgeonStudioERP.iss').read_text()
     assert (ASSETS/'forgeon.ico').read_bytes()[:4]==b'\x00\x00\x01\x00'
     assert (ASSETS/'swiss-alps.png').is_file()

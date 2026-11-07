@@ -7,6 +7,7 @@ FORGEON_STUDIO_ERP_2_0/
   docs/ARQUITETURA.md
   docs/ARVORE.txt
   docs/DEPENDENCIAS_E_SEGURANCA.md
+  docs/HF02_PRODUCAO.md
   docs/HOTFIXES.md
   docs/INSTALADOR_WINDOWS.md
   docs/REGRAS_FINANCEIRAS.md
@@ -24,9 +25,11 @@ FORGEON_STUDIO_ERP_2_0/
   forgeon/business/labels.py
   forgeon/business/numbers.py
   forgeon/business/pricing.py
+  forgeon/business/production.py
   forgeon/business/service.py
   forgeon/business/updates.py
   forgeon/db/__init__.py
+  forgeon/db/migration_v2.sql
   forgeon/db/schema.sql
   forgeon/db/store.py
   forgeon/importers/__init__.py
@@ -40,6 +43,7 @@ FORGEON_STUDIO_ERP_2_0/
   forgeon/ui/__init__.py
   forgeon/ui/charts.py
   forgeon/ui/main.py
+  forgeon/ui/production.py
   forgeon/ui/updates.py
   forgeon/ui/visual.py
   forgeon/ui/widgets.py
@@ -66,6 +70,7 @@ FORGEON_STUDIO_ERP_2_0/
   tests/test_additional.py
   tests/test_business.py
   tests/test_files.py
+  tests/test_hf02.py
   tests/test_hotfix.py
   tests/test_orders.py
   tests/test_packaging.py

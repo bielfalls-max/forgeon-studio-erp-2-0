@@ -58,3 +58,7 @@ O arquivo `forgeon/db/schema.sql` é a definição integral do banco. `applicati
 ## Limites deliberados
 
 O aplicativo não acompanha impressoras, anúncios publicados, IA, estoque contábil completo, emissão fiscal, integração automática de marketplace ou conciliação bancária. Compras e consumo são registrados para análise gerencial; não há controle de lotes nem custo médio de estoque automático. Não existe atualização automática ou publicação externa.
+
+## HF02 — esquema 2
+
+O script base `schema.sql` continua representando o esquema 1 deste projeto. A criação e atualização aplicam em seguida `migration_v2.sql`, acrescentando `order_financials` (componentes financeiros por pedido), `item_usage` (snapshot de consumo por item) e `product_slices` (origem da receita de impressão). Bancos existentes recebem backup consistente antes da conversão; backups de esquema 1 só são convertidos depois de validados em estágio local. A versão do esquema vigente é 2, e a identidade do projeto permanece a mesma. Campos de compradores não são incluídos. Consulte `HF02_PRODUCAO.md`.

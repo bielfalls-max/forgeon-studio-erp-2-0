@@ -50,3 +50,11 @@ A compilação utiliza PyInstaller 6.16.0, hooks 2025.9, altgraph 0.17.4, setupt
 ## HF01 — rede opcional e recursos
 
 A consulta de atualizações usa `urllib`/TLS da biblioteca padrão, em thread separada e sem credenciais. Não envia arquivos, banco nem informações de compradores. URLs de instaladores são restritas ao repositório oficial, com HTTPS, limite de tamanho e redirecionamentos para distribuição GitHub. O download usa arquivo temporário e só substitui o destino após tamanho, assinatura MZ e SHA-256 coincidirem com os metadados da Release. Não há instalação ou execução automática. O SHA-256 não é assinatura digital de autoria. Os testes usam respostas sintéticas, falhas de hash, cancelamento e redirecionamentos indevidos. As imagens locais e seu ícone estão documentados em `forgeon/assets/ORIGEM_DOS_RECURSOS.md`; nenhuma função de IA foi adicionada ao aplicativo. Os gráficos usam desenho local QPainter/Qt Widgets, sem adicionar QtCharts ou uma nova biblioteca de gráficos ao pacote.
+
+## HF02 — importação e esquema de dados
+
+O leitor XLSX redefine dimensões declaradas incorretamente e impõe limites ao iterar linhas/colunas/células reais. Cabeçalhos repetidos são diferenciados. Somente campos gerenciais explicitamente mapeados entram no banco. Preços, taxas e descontos monetários continuam com Decimal/centavos; referências do comprador e totais da fonte não são somadas como novas receitas.
+
+O cadastro do fatiador agrega somente as placas confirmadas pelo usuário e divide por produtos completos, sem executar G-code ou extrair conteúdo do ZIP. Guarda apenas a receita necessária (cores, gramas, horas, placas, unidades e nome simples do arquivo), sem imagens/modelos, caminhos de usuário ou comandos.
+
+O banco de esquema 1 deste projeto recebe backup antes de aplicar o script local confiável `migration_v2.sql`. Na restauração, identidade, integridade, chaves e esquema exato são conferidos antes de converter uma cópia temporária; o arquivo de backup original não é modificado. O esquema 2 acrescenta snapshots de uso e componentes financeiros, preservando tabelas e custos congelados anteriores. Arquivos particulares fornecidos para diagnóstico foram testados localmente, sem envio ao GitHub ou inclusão no instalador.

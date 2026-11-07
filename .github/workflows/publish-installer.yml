@@ -71,10 +71,10 @@ jobs:
               result=json.loads((Path('evidence')/name).read_text())
               assert result['ok'] and result['screens']==11 and result['version']==version and not result['errors']
           upgrade=json.loads(Path('evidence/verificacao-atualizacao.json').read_text(encoding='utf-8-sig'))
-          assert upgrade['to']==version and upgrade['database_unchanged'] and upgrade['backup_preserved']
+          assert upgrade['to']==version and upgrade['database_unchanged'] and upgrade['backup_preserved'] and upgrade.get('schema_migrated')
           suites=ElementTree.parse('evidence/resultado-windows.xml').getroot()
           for suite in suites.iter('testsuite'):
-              assert int(suite.get('tests'))>=51 and suite.get('failures')=='0' and suite.get('errors')=='0'
+              assert int(suite.get('tests'))>=79 and suite.get('failures')=='0' and suite.get('errors')=='0'
           PY
       - name: Publicar prévia instalável com evidências
         env:
@@ -82,4 +82,4 @@ jobs:
           BUILD_SHA: ${{ steps.build.outputs.sha }}
           APP_VERSION: ${{ steps.installer.outputs.version }}
         run: |
-          gh release create "v$APP_VERSION" "installer/ForgeonStudioERP-$APP_VERSION-Windows-x64-Setup.exe" installer/SHA256.txt evidence/resultado-windows.xml evidence/verificacao-executavel.json evidence/verificacao-instalado.json evidence/verificacao-atualizacao.json --repo "$GITHUB_REPOSITORY" --target "$BUILD_SHA" --title "FORGEON STUDIO ERP $APP_VERSION — HF01 Alpes" --notes-file packaging/RELEASE_NOTES.md --prerelease
+          gh release create "v$APP_VERSION" "installer/ForgeonStudioERP-$APP_VERSION-Windows-x64-Setup.exe" installer/SHA256.txt evidence/resultado-windows.xml evidence/verificacao-executavel.json evidence/verificacao-instalado.json evidence/verificacao-atualizacao.json --repo "$GITHUB_REPOSITORY" --target "$BUILD_SHA" --title "FORGEON STUDIO ERP $APP_VERSION — HF02 Produção" --notes-file packaging/RELEASE_NOTES.md --prerelease

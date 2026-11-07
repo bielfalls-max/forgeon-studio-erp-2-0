@@ -17,3 +17,10 @@ LABELS = {
 'allocation':'Rateio por produto','month':'Mês','fortnight':'Quinzena','total_cents':'Custo total',
 'suggested_cents':'Preço sugerido','pending':'Pendências','operation':'Operação','detail':'Detalhes',
 }
+
+LABELS.update({'unit_grams':'Gramas por unidade','unit_hours':'Horas por unidade','unknown_units':'Unidades sem receita','snapshot_at':'Consumo registrado em',
+'commission_cents':'Comissão líquida','service_cents':'Serviço líquido','transaction_cents':'Taxa de transação','commission_gross_cents':'Comissão bruta (referência)',
+'service_gross_cents':'Serviço bruto (referência)','buyer_total_cents':'Valor Total comprador (referência)','buyer_shipping_cents':'Frete comprador (referência)',
+'market_total_cents':'Total global da fonte (referência)','net_cents':'Receita após taxas e reembolso','items_cents':'Subtotal dos itens','seller_discount_cents':'Cupons/moedas do vendedor',
+'usage_total_grams':'Filamento conhecido dos pedidos (g)','usage_total_hours':'Impressão conhecida dos pedidos (h)','planned_grams':'Filamento previsto a produzir (g)',
+'sent_grams':'Filamento estimado de enviados/devolvidos (g)','unknown_usage_units':'Unidades sem receita','unknown_time_units':'Unidades sem tempo'})

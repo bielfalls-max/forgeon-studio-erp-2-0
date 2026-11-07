@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QFormLayout,QLineEdit,QComboBox,QDialogButtonBox,
                               QLabel,QTableWidget,QTableWidgetItem,QAbstractItemView,QHeaderView,QPushButton,
-                              QWidget,QHBoxLayout,QTextBrowser,QCheckBox,QSpinBox,QMessageBox,QMenu,QFileDialog,QApplication)
+                              QWidget,QHBoxLayout,QTextBrowser,QCheckBox,QSpinBox,QMessageBox,QMenu,QFileDialog,QApplication,QScrollArea)
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor
 from ..business.numbers import money
@@ -18,7 +18,10 @@ class Form(QDialog):
         layout=QVBoxLayout(self)
         if note:
             label=QLabel(note); label.setWordWrap(True); layout.addWidget(label)
-        form=QFormLayout(); layout.addLayout(form)
+        form=QFormLayout()
+        if len(fields)>10:
+            scroll=QScrollArea();scroll.setWidgetResizable(True);body=QWidget();body.setLayout(form);scroll.setWidget(body);layout.addWidget(scroll);scroll.setMinimumHeight(420)
+        else:layout.addLayout(form)
         self.inputs={}
         for key,label,value in fields:
             if isinstance(value,list):
@@ -79,7 +82,10 @@ class Table(QTableWidget):
                     value=money(value)
                 if value is None:
                     value='Pendente'
-                if key in ('date','start','end') and isinstance(value,str):
+                if value is not None and key in ('weight','grams','unit_grams','hours','unit_hours'):
+                    try:value=f'{Decimal(str(value)):,.3f}'.replace(',','X').replace('.',',').replace('X','.')
+                    except InvalidOperation:pass
+                if key in ('date','start','end','cost_at','snapshot_at') and isinstance(value,str):
                     try: value=datetime.strptime(value[:10],'%Y-%m-%d').strftime('%d/%m/%Y')+value[10:]
                     except ValueError: pass
                 item=SortItem(str(value))

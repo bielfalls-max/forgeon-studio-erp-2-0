@@ -29,6 +29,10 @@ class Store:
         if existed:
             try:
                 self.validate(self.db)
+                self.verify_schema(self.db)
+                if self.db.execute("PRAGMA user_version").fetchone()[0]==1:
+                    self.backup()
+                    self.migrate(self.db)
             except Exception:
                 self.db.close()
                 raise
@@ -36,15 +40,36 @@ class Store:
             self.db.executescript(Path(__file__).with_name('schema.sql').read_text(encoding='utf-8'))
             self.db.executemany('INSERT INTO settings VALUES(?,?)', DEFAULTS.items())
             self.db.commit()
+            self.migrate(self.db)
 
     @staticmethod
     def validate(connection):
-        if connection.execute('PRAGMA application_id').fetchone()[0] != APP_ID or connection.execute('PRAGMA user_version').fetchone()[0] != 1:
+        if connection.execute('PRAGMA application_id').fetchone()[0] != APP_ID or connection.execute('PRAGMA user_version').fetchone()[0] not in (1,2):
             raise ValueError('Banco incompatível com FORGEON ERP 2.0 (projeto novo).')
         if connection.execute("SELECT value FROM meta WHERE key='project'").fetchone()[0] != PROJECT:
             raise ValueError('Identidade do banco incompatível.')
         if connection.execute('PRAGMA integrity_check').fetchone()[0] != 'ok' or connection.execute('PRAGMA foreign_key_check').fetchone():
             raise ValueError('Falha de integridade do banco.')
+
+    @staticmethod
+    def migrate(connection):
+        if connection.execute('PRAGMA user_version').fetchone()[0]!=1:return
+        try:
+            connection.executescript('BEGIN IMMEDIATE;\n'+Path(__file__).with_name('migration_v2.sql').read_text(encoding='utf-8')+'\nCOMMIT;')
+        except Exception:
+            connection.rollback()
+            raise
+
+    @staticmethod
+    def verify_schema(connection):
+        version=connection.execute('PRAGMA user_version').fetchone()[0]
+        with closing(sqlite3.connect(':memory:')) as reference:
+            reference.executescript(Path(__file__).with_name('schema.sql').read_text(encoding='utf-8'))
+            if version==2:Store.migrate(reference)
+            def definitions(conn):
+                return {r[0]: ' '.join(r[1].split()).lower() for r in conn.execute("SELECT name,sql FROM sqlite_master WHERE type='table'")}
+            if definitions(connection)!=definitions(reference) or connection.execute("SELECT 1 FROM sqlite_master WHERE type IN('trigger','view')").fetchone():
+                raise ValueError('Esquema de backup não corresponde a este projeto.')
 
     def rows(self, sql, args=()):
         return [dict(r) for r in self.db.execute(sql, args)]
@@ -102,19 +127,13 @@ class Store:
         os.close(fd)
         try:
             shutil.copyfile(source, staged)
-            with closing(sqlite3.connect(Path(staged).as_uri() + '?mode=ro', uri=True)) as candidate:
+            with closing(sqlite3.connect(staged)) as candidate:
                 candidate.execute('PRAGMA trusted_schema=OFF')
                 self.validate(candidate)
-                expected = {'meta','settings','products','filaments','product_colors','sku_codes','origins','orders','order_items','expenses','purchases','stats','audit'}
-                tables = {r[0] for r in candidate.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-                if tables != expected or candidate.execute("SELECT 1 FROM sqlite_master WHERE type IN ('trigger','view')").fetchone():
-                    raise ValueError('Estrutura de backup não reconhecida.')
-                with closing(sqlite3.connect(':memory:')) as reference:
-                    reference.executescript(Path(__file__).with_name('schema.sql').read_text(encoding='utf-8'))
-                    def definitions(conn):
-                        return {r[0]: ' '.join(r[1].split()).lower() for r in conn.execute("SELECT name,sql FROM sqlite_master WHERE type='table'")}
-                    if definitions(candidate) != definitions(reference):
-                        raise ValueError('Esquema de backup não corresponde a este projeto.')
+                self.verify_schema(candidate)
+                self.migrate(candidate)
+                self.validate(candidate)
+                self.verify_schema(candidate)
                 preserved = self.backup()
                 candidate.backup(self.db)
             self.db.execute('PRAGMA foreign_keys=ON')

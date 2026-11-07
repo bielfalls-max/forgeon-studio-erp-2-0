@@ -184,3 +184,11 @@ class ERP:
                 count += 1
             self.s.log('congelar_custos_pendentes', {'itens': count})
         return count
+
+    def match_product(self,listing,variation):
+        from .production import match_product
+        return match_product(self,listing,variation)
+
+    def resolve_known_products(self):
+        from .production import resolve_known_products
+        return resolve_known_products(self)

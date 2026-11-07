@@ -1,5 +1,36 @@
 # Notas de atualização
 
+## 2.0.2 — HF02 · Produção — 06/11/2026
+
+### Cadastro integrado ao fatiador
+- Produtos ganha cartões de resumo, orientação para começar e painel lateral com receita e custos.
+- Cadastrar via 3MF / G-code cria o produto físico, suas cores, gramas por unidade e tempo de impressão em um único fluxo.
+- É possível selecionar várias placas que compõem o mesmo produto. A divisão usa produtos completos, nunca a quantidade de peças do arquivo.
+- O material e a cor são identificados pelos metadados; nomes e preços por kg ficam disponíveis para revisão antes de salvar.
+- Precificação mostra produto selecionado, peso, duração, custo, preço sugerido, composição em colunas e catálogo. Cálculo se atualiza ao selecionar o produto.
+
+### Vendas e relatórios
+- Leitura de XLSX com dimensões A1 incorretas e cabeçalhos repetidos, comuns em exportações do marketplace.
+- Datas com horas e minutos são reconhecidas, e o período/mês vêm das datas e do intervalo declarado no nome do arquivo.
+- Após confirmar a prévia, o relatório abre no período importado, com valores em colunas separadas.
+- Receita dos produtos usa subtotais já descontados menos cupons/moedas financiados pelo vendedor. Frete pago pelo comprador, Valor Total e Total global são referências separadas. Não se desconta novamente a diferença entre preço original e acordado.
+- Comissão e serviço líquidos têm preferência quando disponíveis; taxas do pedido não são multiplicadas pelos itens.
+- Quantidade declarada no pedido, quando presente, é conferida para recusar arquivos com itens faltando.
+- Produto reconhecido por variação exata e unívoca recebe a receita cadastrada, mesmo vindo de outro anúncio. SKU principal, trecho do título e semelhança ambígua nunca unem produtos.
+- Variações de cor, modelo/tamanho e personagens diferentes permanecem separadas até revisão. SKU original e custos já congelados são preservados.
+
+### Produção na visão geral
+- Filamento e horas estimados dos pedidos, consumo por cor/material e tabela por pedido.
+- Separa previsão a produzir de consumo estimado dos enviados/entregues/devolvidos. Não é telemetria ou comprovação de impressão.
+- Itens sem receita ou tempo são exibidos como pendência, não como consumo zero conhecido.
+- Abas de relatório com gramas/horas por unidade e por item, custo de produção e componentes financeiros por pedido. Exportação XLSX inclui essas tabelas.
+
+### Dados e atualização
+- Banco passa ao esquema 2 deste mesmo projeto, com backup consistente antes da conversão. Preserva produtos, cores, SKUs, pedidos, custos históricos e backups.
+- Backups de esquema 1 deste ERP são aceitos, validados e convertidos em uma cópia temporária antes da restauração. Não são aceitos bancos antigos de outros projetos Forgeon.
+- Nenhum arquivo enviado pelo usuário ou dado comercial acompanha o instalador. Importe seus arquivos localmente depois de atualizar.
+- Custos preenchidos após o cadastro são estimativas registradas com a data atual; custos históricos já congelados não são recalculados.
+
 ## 2.0.1 — HF01 · Alpes — 06/11/2026
 
 ### Visual
