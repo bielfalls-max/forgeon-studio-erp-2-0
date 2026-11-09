@@ -62,6 +62,8 @@ def test_hotfix_versions_and_resources_agree():
     from forgeon.version import VERSION
     root=Path(__file__).resolve().parent.parent
     assert VERSION=='2.0.5'
+    import tomllib
+    assert tomllib.loads((root/'pyproject.toml').read_text())['project']['version']==VERSION
     assert f'#define AppVersion "{VERSION}"' in (root/'packaging/ForgeonStudioERP.iss').read_text()
     assert (ASSETS/'forgeon.ico').read_bytes()[:4]==b'\x00\x00\x01\x00'
     assert (ASSETS/'swiss-alps.png').is_file()

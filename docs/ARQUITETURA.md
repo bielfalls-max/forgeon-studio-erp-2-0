@@ -61,4 +61,11 @@ O aplicativo não acompanha impressoras, anúncios publicados, IA, estoque cont�
 
 ## HF02 — esquema 2
 
-O script base `schema.sql` continua representando o esquema 1 deste projeto. A criação e atualização aplicam em seguida `migration_v2.sql`, acrescentando `order_financials` (componentes financeiros por pedido), `item_usage` (snapshot de consumo por item) e `product_slices` (origem da receita de impressão). Bancos existentes recebem backup consistente antes da conversão; backups de esquema 1 só são convertidos depois de validados em estágio local. A versão do esquema vigente é 2, e a identidade do projeto permanece a mesma. Campos de compradores não são incluídos. Consulte `HF02_PRODUCAO.md`.
+O script base `schema.sql` continua representando o esquema 1 deste projeto. A criação e atualização aplicam em seguida `migration_v2.sql`, acrescentando `order_financials` (componentes financeiros por pedido), `item_usage` (snapshot de consumo por item) e `product_slices` (origem da receita de impressão). Bancos existentes recebem backup consistente antes da conversão; backups de esquema 1 só são convertidos depois de validados em estágio local. Na entrega HF02, a versão do esquema era 2, e a identidade do projeto permanece a mesma. Campos de compradores não são incluídos. Consulte `HF02_PRODUCAO.md`.
+
+
+## HF03 a HF05 — esquema 3
+
+`migration_v3.sql` acrescenta preferências, filtros salvos, revisões de receitas, histórico de importações, lotes/eventos de produção, rolos/movimentos de massa e recebimentos/vínculos. Migrações 1 e 2 publicadas são preservadas. A validação de restauração compara as tabelas com a versão declarada antes de converter em estágio.
+
+Organização, oficina e gestão ficam em módulos separados da interface. A baixa de todas as cores e o evento de conclusão formam uma transação; uma restrição única impede mais de um consumo por lote. Movimentos e estornos mantêm rastreabilidade. Reserva é derivada dos lotes abertos, sem alterar o saldo físico. Repasses são valores recebidos, separados de receita e taxas. Preferências e filtros não alteram os snapshots dos pedidos. Ajuda contextual é texto local.

@@ -9,6 +9,8 @@ on:
       - 'forgeon_launcher.py'
       - 'packaging/**'
       - 'requirements*.txt'
+      - 'pyproject.toml'
+      - 'tests/**'
       - '.github/workflows/windows-installer.yml'
 
 permissions:
