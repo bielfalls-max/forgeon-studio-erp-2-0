@@ -2,7 +2,7 @@
 
 Aplicativo desktop local para gestão de pequena empresa de impressão 3D. Projeto criado do zero em Python 3.12, PySide6/Qt Widgets e SQLite. Interface em português, tema escuro e dados persistentes. O banco de produção é criado vazio no primeiro uso. Nenhum arquivo de versões antigas é necessário ou reutilizado.
 
-**Versão instalável para Windows:** baixe o arquivo `ForgeonStudioERP-2.0.2-Windows-x64-Setup.exe` na [página de versões](https://github.com/bielfalls-max/forgeon-studio-erp-2-0/releases/tag/v2.0.2). Veja também [Instalador Windows](docs/INSTALADOR_WINDOWS.md). O instalador inclui Python e bibliotecas; o ZIP do botão Code contém apenas os fontes. A compilação e os testes nativos são feitos pelo fluxo **Instalador Windows**, na aba Actions. O instalador só está disponível após uma execução bem-sucedida.
+**Versão instalável para Windows:** baixe o arquivo `ForgeonStudioERP-2.0.5-Windows-x64-Setup.exe` na [página de versões](https://github.com/bielfalls-max/forgeon-studio-erp-2-0/releases/tag/v2.0.5). Veja também [Instalador Windows](docs/INSTALADOR_WINDOWS.md). O instalador inclui Python e bibliotecas; o ZIP do botão Code contém apenas os fontes. A compilação e os testes nativos são feitos pelo fluxo **Instalador Windows**, na aba Actions. O instalador só está disponível após uma execução bem-sucedida.
 
 As instruções abaixo são para executar **a versão em código-fonte**, criando um ambiente Python isolado. Ela não modifica a instalação antiga do Forgeon.
 
@@ -40,6 +40,10 @@ py -3.12 -m venv .venv
 ```
 
 Os wheels de Linux não servem para instalar PySide6 no Windows. A pasta de dependências não está incluída no ZIP desta entrega.
+
+## Hotfixes HF03 a HF05 — 2.0.5
+
+Pacote cumulativo de organização, produção/estoque e gestão. Ajuda contextual nas 16 abas, filtros salvos, lotes/baixas/perdas, simulador, desempenho, repasses e ajustes de aparência. Veja o [guia completo](docs/HF03_05_GUIA.md) e as [notas de atualização](forgeon/assets/CHANGELOG.md). Bancos anteriores são preservados e migrados ao esquema 3 com backup prévio.
 
 ## Hotfix HF02 — 2.0.2
 

@@ -8,8 +8,8 @@ def test_all_screens_empty_database(app,erp,monkeypatch):
     errors=[]
     monkeypatch.setattr(QMessageBox,'warning',lambda *args:errors.append(str(args[-1])))
     window=MainWindow(erp); window.show();app.processEvents()
-    assert window.stack.count()==11
-    for i in range(11):
+    assert window.stack.count()==16
+    for i in range(16):
         window.nav.setCurrentRow(i);app.processEvents()
         assert window.stack.currentIndex()==i
     assert not errors,errors
@@ -28,7 +28,7 @@ def test_all_screens_populated(app,erp,product,monkeypatch):
     erp.purchase('06/11/2026',fid,1000,90,10)
     errors=[];monkeypatch.setattr(QMessageBox,'warning',lambda *a:errors.append(str(a[-1])))
     w=MainWindow(erp);w.show()
-    for i in range(11):w.nav.setCurrentRow(i);app.processEvents()
+    for i in range(16):w.nav.setCurrentRow(i);app.processEvents()
     assert not errors,errors
     assert w.products_table.rowCount()==1
     assert w.orders_table.rowCount()==1

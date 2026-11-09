@@ -92,6 +92,8 @@ def save_sliced_product(erp,name,model,recipe,colors,packaging='0',other='0',pid
         detail={key:recipe.get(key) for key in ('name','hours','plates','units','source_name','warnings')}
         s.db.execute('INSERT INTO product_slices VALUES(?,?,?) ON CONFLICT(product_id) DO UPDATE SET detail=excluded.detail,recorded=excluded.recorded',
                      (pid,json.dumps(detail,ensure_ascii=False),datetime.now().isoformat(timespec='seconds')))
+        from .revisions import record_revision
+        record_revision(erp,pid,'Receita do fatiador')
         s.log('produto_do_fatiador',{'produto':pid,'placas':recipe.get('plates',[]),'unidades_completas':recipe.get('units',1)})
     linked,frozen=resolve_known_products(erp)
     return pid,linked,frozen

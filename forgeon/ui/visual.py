@@ -73,7 +73,7 @@ class GlassCard(QFrame):
             if not backdrop.frosted.isNull():
                 point=self.mapTo(backdrop,QPoint(0,0))
                 p.drawPixmap(QRectF(self.rect()),backdrop.frosted,QRectF(point.x(),point.y(),self.width(),self.height()))
-        p.fillRect(self.rect(),QColor(12,24,42,225 if backdrop is None or backdrop.focus_mode else 205))
+        p.fillRect(self.rect(),QColor(12,24,42,225 if backdrop is None or backdrop.focus_mode else getattr(backdrop,"glass_alpha",205)))
         reflection=QLinearGradient(0,0,self.width()*.7,self.height())
         reflection.setColorAt(0,QColor(220,236,255,21));reflection.setColorAt(.48,QColor(220,236,255,5));reflection.setColorAt(1,QColor(220,236,255,0))
         p.fillRect(self.rect(),reflection)

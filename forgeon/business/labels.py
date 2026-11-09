@@ -24,3 +24,5 @@ LABELS.update({'unit_grams':'Gramas por unidade','unit_hours':'Horas por unidade
 'market_total_cents':'Total global da fonte (referência)','net_cents':'Receita após taxas e reembolso','items_cents':'Subtotal dos itens','seller_discount_cents':'Cupons/moedas do vendedor',
 'usage_total_grams':'Filamento conhecido dos pedidos (g)','usage_total_hours':'Impressão conhecida dos pedidos (h)','planned_grams':'Filamento previsto a produzir (g)',
 'sent_grams':'Filamento estimado de enviados/devolvidos (g)','unknown_usage_units':'Unidades sem receita','unknown_time_units':'Unidades sem tempo'})
+
+LABELS.update({"losses_cents":"Perdas registradas","received_cents":"Repasses recebidos","received_cash_cents":"Recebimentos menos despesas/compras","allocation":"Consulta por itens selecionados","reserved_grams":"Reservado g","available_grams":"Disponível g","shortage_grams":"Falta g","contribution_cents":"Contribuição","profit_hour_cents":"Contribuição/h"})

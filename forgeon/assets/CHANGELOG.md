@@ -1,5 +1,35 @@
 # Notas de atualização
 
+## 2.0.5 — HF03, HF04 e HF05 — 09/11/2026
+
+Pacote cumulativo: instale uma vez sobre a versão anterior. Banco local preservado, com backup antes da migração do esquema.
+
+### HF03 · Organização
+- Central de pendências, revisão explícita de vínculos em lote e busca global (Ctrl+F).
+- Comparação antes de importar pedidos: novos, alterados e sem alteração comercial; identificação do mesmo arquivo.
+- Filtros de relatórios por SKU, variação, material, cor e cobertura de receitas; filtros salvos.
+- Colunas reordenáveis e ocultáveis com posição/largura lembradas por tabela.
+- Pequeno botão Como usar em todas as 16 abas, ajuda nas subabas e atalho F1.
+
+### HF04 · Produção
+- Lotes avulsos ou sincronizados de A Enviar, etapas e necessidades agrupadas.
+- Reserva por material/cor, saldo físico por rolo, faltas, ajustes com motivo e histórico de movimentações.
+- Baixa confirmada ao marcar Pronto, sem duplicação; estoque insuficiente impede concluir.
+- Compras novas criam lotes de estoque; compras antigas exigem confirmação do saldo atual.
+- Perdas/reimpressões com gramas, horas, custo estimado e estorno rastreável.
+- Histórico de alterações das receitas, sem alterar custos congelados dos pedidos.
+
+### HF05 · Gestão
+- Simulador temporário de filamento, embalagem, energia, máquina, taxas e margem/acréscimo.
+- Desempenho por produto com contribuição e retorno por hora quando conhecido.
+- Repasses recebidos e conciliação manual por pedido, importação XLSX com referência única.
+- Recebimentos separados de vendas; caixa por recebimentos separado de caixa estimado.
+- Fonte, contraste, opacidade dos painéis e largura do menu configuráveis.
+- Diagnóstico JSON local com versões, integridade e contagens; sem dados comerciais ou envio automático.
+
+Filamento/horas seguem receitas e confirmação do operador; não há leitura da impressora. Contribuição não é lucro líquido. Repasses são informados pelo usuário, sem integração bancária. Simulador não altera os parâmetros do cadastro. Operação local funciona sem internet.
+
+
 ## 2.0.2 — HF02 · Produção — 06/11/2026
 
 ### Cadastro integrado ao fatiador

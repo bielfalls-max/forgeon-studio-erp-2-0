@@ -10,10 +10,24 @@ def rounded_money(n):
     return int(Decimal(n).quantize(Decimal('1'),rounding=ROUND_HALF_UP))
 
 
-def report(erp, start, end, product_id=None, status=''):
+def report(erp, start, end, product_id=None, status='', filters=None):
     start, end = day(start), day(end)
     if end < start:
         raise ValueError('Período inválido.')
+    filters=filters or {}
+    narrowed=product_id is not None or any(filters.get(k) for k in ('sku','variation','material','color','coverage'))
+    def matches(i):
+        if product_id is not None and i['product_id']!=product_id:return False
+        if filters.get('sku') and norm(filters['sku']) not in norm(i['original_sku']):return False
+        if filters.get('variation') and norm(filters['variation']) not in norm(i['variation']):return False
+        d=json.loads(i.get('usage_detail') or i.get('cost_detail') or '{}')
+        colors=d.get('colors',[])
+        if filters.get('material') and not any(norm(filters['material']) in norm(c['material']) for c in colors):return False
+        if filters.get('color') and not any(norm(filters['color']) in norm(c['color']) for c in colors):return False
+        complete=i['product_id'] is not None and i['cost_cents'] is not None and Decimal(d.get('grams','0'))>0 and Decimal(d.get('hours','0'))>0
+        if filters.get('coverage')=='completos' and not complete:return False
+        if filters.get('coverage')=='pendentes' and complete:return False
+        return True
     s = erp.s
     orders = s.rows('SELECT o.*,f.detail financial_detail FROM orders o LEFT JOIN order_financials f ON f.order_id=o.id WHERE date BETWEEN ? AND ? ORDER BY date,id',(start,end))
     gross = fees = refunds = production = 0
@@ -26,17 +40,19 @@ def report(erp, start, end, product_id=None, status=''):
     usage_orders=[];usage_items=[];financial_rows=[]
     total_grams=Decimal(0);total_hours=Decimal(0);planned_grams=Decimal(0);sent_grams=Decimal(0);unknown_units=0;unknown_time_units=0
     for o in orders:
-        if status and status_kind(o['status']) != status:
-            continue
+        if status:
+            if status.startswith('texto:'):
+                if norm(o['status'])!=norm(status[6:]):continue
+            elif status_kind(o['status'])!=status:continue
         items = s.rows('SELECT i.*,p.name product_name,u.detail usage_detail,u.recorded usage_at FROM order_items i LEFT JOIN products p ON p.id=i.product_id LEFT JOIN item_usage u ON u.item_id=i.id WHERE order_id=?',(o['id'],))
-        picked = [i for i in items if product_id is None or i['product_id'] == product_id]
+        picked = [i for i in items if matches(i)]
         if not picked:
             continue
         selected.append(o)
         # Product filters allocate order totals by item sale value; sum of all shares is exact before rounding.
         basis = sum(i['qty']*i['unit_cents'] for i in items)
-        share = Decimal(sum(i['qty']*i['unit_cents'] for i in picked)) / basis if product_id is not None and basis else Decimal(1)
-        if product_id is not None and not basis:
+        share = Decimal(sum(i['qty']*i['unit_cents'] for i in picked)) / basis if narrowed and basis else Decimal(1)
+        if narrowed and not basis:
             partial = True
         partial |= bool(o['partial'])
         kind = status_kind(o['status'])
@@ -92,20 +108,25 @@ def report(erp, start, end, product_id=None, status=''):
     stat_total = sum(r['revenue_cents'] for r in full_stats)
     if len(full_stats)!=len(stats) or any(r['partial'] for r in stats):
         partial = True
-    if not selected or not stats or product_id is not None or status:
+    if not selected or not stats or narrowed or status:
         partial = True
     # Stats are comparison only. They NEVER enter revenue or profits.
     if stats and abs(Decimal(stat_total)-Decimal(gross)) > 1:
         partial = True
     partial |= unknown_time_units>0
+    from ..business.workshop import losses
+    loss_rows=losses(erp,start,end,product_id)
+    loss_total=sum(r['value_cents'] for r in loss_rows if not r['voided'])
+    receipts=s.one('SELECT coalesce(sum(amount_cents),0) n FROM settlements WHERE date BETWEEN ? AND ?',(start,end))['n']
     def rounded(n):
         from decimal import ROUND_HALF_UP
         return int(Decimal(n).quantize(Decimal('1'),rounding=ROUND_HALF_UP))
     return {'start':start,'end':end,'partial':bool(partial),'orders_count':len(selected),'pending_items':pending,
             'gross_cents':rounded(gross),'fees_cents':rounded(fees),'refunds_cents':rounded(refunds),
             'production_cents':production,'expenses_cents':expense_total,'purchases_cents':purchase_total,
-            'operating_cents':rounded(gross-fees-refunds-production-expense_total),
+            'operating_cents':rounded(gross-fees-refunds-production-expense_total-loss_total),
             'cash_cents':rounded(gross-fees-refunds-expense_total-purchase_total),
+            'losses_cents':loss_total,'losses':loss_rows,'received_cents':receipts,'received_cash_cents':receipts-expense_total-purchase_total,
             'stats_cents':stat_total,'difference_cents':rounded(Decimal(stat_total)-Decimal(gross)),
             'usage_total_grams':str(total_grams),'usage_total_hours':str(total_hours),'planned_grams':str(planned_grams),'sent_grams':str(sent_grams),
             'unknown_usage_units':unknown_units,'unknown_time_units':unknown_time_units,'usage_orders':usage_orders,'usage_items':usage_items,'financial_rows':financial_rows,
@@ -113,12 +134,12 @@ def report(erp, start, end, product_id=None, status=''):
             'best_sellers':[{'product':k,**v} for k,v in sorted(sold.items(),key=lambda kv:-kv[1]['qty'])],
             'consumption':[{'month':k[0],'fortnight':k[1],'material':k[2],'color':k[3],'grams':str(v)} for k,v in sorted(consumption.items())],
             'orders':selected,'expenses':expenses,'purchases':purchases,'stats':stats,
-            'allocation':product_id is not None}
+            'allocation':narrowed}
 
 
 def monthly(erp):
     from calendar import monthrange
-    months = {r['month'] for r in erp.s.rows("SELECT substr(date,1,7) month FROM orders UNION SELECT substr(date,1,7) FROM expenses UNION SELECT substr(date,1,7) FROM purchases UNION SELECT substr(start,1,7) FROM stats")}
+    months = {r['month'] for r in erp.s.rows("SELECT substr(date,1,7) month FROM orders UNION SELECT substr(date,1,7) FROM expenses UNION SELECT substr(date,1,7) FROM purchases UNION SELECT substr(start,1,7) FROM stats UNION SELECT substr(date,1,7) FROM production_events UNION SELECT substr(date,1,7) FROM settlements")}
     result = []
     for month in sorted(months):
         y,m = map(int,month.split('-'))

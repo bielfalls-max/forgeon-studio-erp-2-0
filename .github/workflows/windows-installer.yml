@@ -58,7 +58,7 @@ jobs:
           $process = Start-Process -FilePath $exe -ArgumentList @('--verificar-instalacao', $report) -Wait -PassThru
           if ($process.ExitCode -ne 0 -or !(Test-Path $report)) { throw 'Executável não abriu corretamente' }
           $result = Get-Content $report -Raw | ConvertFrom-Json
-          if (!$result.ok -or $result.screens -ne 11) { throw 'Verificação de telas falhou' }
+          if (!$result.ok -or $result.screens -ne 16) { throw 'Verificação de telas falhou' }
       - name: Compilar instalador Inno Setup disponível no runner
         shell: pwsh
         run: |
@@ -88,7 +88,7 @@ jobs:
           if ($process.ExitCode -ne 0) { throw 'Instalação de teste falhou' }
           $after = (Get-FileHash -Algorithm SHA256 $database).Hash
           if ($before -ne $after) { throw 'Banco foi alterado pela instalação do hotfix' }
-          python -c "from forgeon.db.store import Store,data_directory; s=Store(data_directory()/'forgeon2.sqlite3'); s.validate(s.db); assert s.db.execute('PRAGMA user_version').fetchone()[0]==2; assert s.one('SELECT name FROM products')['name']=='PRODUTO DE TESTE DE PRESERVACAO'; assert list((data_directory()/'backups').glob('*.sqlite3')); s.close()"
+          python -c "from forgeon.db.store import Store,data_directory; s=Store(data_directory()/'forgeon2.sqlite3'); s.validate(s.db); assert s.db.execute('PRAGMA user_version').fetchone()[0]==3; assert s.one('SELECT name FROM products')['name']=='PRODUTO DE TESTE DE PRESERVACAO'; assert list((data_directory()/'backups').glob('*.sqlite3')); s.close()"
           if ($LASTEXITCODE -ne 0) { throw 'Dados e backup não foram preservados' }
           @{from='2.0.0';to=$env:APP_VERSION;database_unchanged=$true;backup_preserved=$true;schema_migrated=$true} | ConvertTo-Json | Set-Content -Encoding utf8 'verificacao-atualizacao.json'
 
@@ -97,7 +97,7 @@ jobs:
           $process = Start-Process -FilePath $exe -ArgumentList @('--verificar-instalacao', $report) -Wait -PassThru
           if ($process.ExitCode -ne 0 -or !(Test-Path $report)) { throw 'Aplicativo instalado falhou' }
           $result = Get-Content $report -Raw | ConvertFrom-Json
-          if (!$result.ok -or $result.screens -ne 11) { throw 'Aplicativo instalado não abriu as onze telas' }
+          if (!$result.ok -or $result.screens -ne 16) { throw 'Aplicativo instalado não abriu as dezesseis telas' }
       - name: Gerar SHA-256 do instalador
         shell: pwsh
         run: |

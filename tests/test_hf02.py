@@ -110,7 +110,7 @@ def legacy_database(path):
 
 def test_schema_upgrade_keeps_legacy_data_and_backup(tmp_path):
     path=tmp_path/'old.sqlite3';legacy_database(path);s=Store(path)
-    assert s.db.execute('PRAGMA user_version').fetchone()[0]==2
+    assert s.db.execute('PRAGMA user_version').fetchone()[0]==3
     assert s.one('SELECT name FROM products')['name']=='Produto preservado'
     assert s.one('SELECT cost_cents FROM order_items')['cost_cents']==200
     from forgeon.business.service import ERP
@@ -123,7 +123,7 @@ def test_schema_upgrade_keeps_legacy_data_and_backup(tmp_path):
 
 def test_restore_version_one_backup_promotes_staging_only(erp,tmp_path):
     source=tmp_path/'v1.sqlite3';legacy_database(source);erp.s.restore(source)
-    assert erp.s.db.execute('PRAGMA user_version').fetchone()[0]==2
+    assert erp.s.db.execute('PRAGMA user_version').fetchone()[0]==3
     assert erp.s.one('SELECT name FROM products')['name']=='Produto preservado'
     with closing(sqlite3.connect(source)) as original:assert original.execute('PRAGMA user_version').fetchone()[0]==1
 

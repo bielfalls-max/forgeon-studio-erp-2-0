@@ -16,7 +16,7 @@ a = Analysis(
     [str(root / 'forgeon_launcher.py')],
     pathex=[str(root)],
     binaries=[],
-    datas=[(str(root / 'forgeon' / 'db' / 'schema.sql'), 'forgeon/db'),(str(root / 'forgeon' / 'db' / 'migration_v2.sql'), 'forgeon/db'),(str(root / 'forgeon' / 'assets'), 'forgeon/assets')] + metadata + licenses,
+    datas=[(str(root / 'forgeon' / 'db' / 'schema.sql'), 'forgeon/db'),(str(root / 'forgeon' / 'db' / 'migration_v2.sql'), 'forgeon/db'),(str(root / 'forgeon' / 'db' / 'migration_v3.sql'), 'forgeon/db'),(str(root / 'forgeon' / 'assets'), 'forgeon/assets')] + metadata + licenses,
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

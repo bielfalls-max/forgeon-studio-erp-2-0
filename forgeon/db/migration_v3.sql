@@ -1,0 +1,13 @@
+CREATE TABLE preferences(key TEXT PRIMARY KEY,value TEXT NOT NULL);
+CREATE TABLE filter_presets(id INTEGER PRIMARY KEY,name TEXT NOT NULL UNIQUE,scope TEXT NOT NULL,detail TEXT NOT NULL);
+CREATE TABLE recipe_revisions(id INTEGER PRIMARY KEY,product_id INTEGER NOT NULL REFERENCES products(id),recorded TEXT NOT NULL,detail TEXT NOT NULL);
+CREATE TABLE import_history(id INTEGER PRIMARY KEY,source_hash TEXT NOT NULL,source_name TEXT NOT NULL,start TEXT NOT NULL,end TEXT NOT NULL,recorded TEXT NOT NULL,summary TEXT NOT NULL);
+CREATE TABLE production_jobs(id INTEGER PRIMARY KEY,order_id TEXT REFERENCES orders(id),item_key TEXT NOT NULL,product_id INTEGER NOT NULL REFERENCES products(id),units INTEGER NOT NULL CHECK(units>0),state TEXT NOT NULL CHECK(state IN('A produzir','Em impressão','Acabamento','Pronto','Cancelado')),recipe TEXT NOT NULL,created TEXT NOT NULL,due TEXT,UNIQUE(order_id,item_key));
+CREATE TABLE production_events(id INTEGER PRIMARY KEY,job_id INTEGER REFERENCES production_jobs(id),kind TEXT NOT NULL CHECK(kind IN('consumo','perda')),date TEXT NOT NULL,grams TEXT NOT NULL,hours TEXT NOT NULL,value_cents INTEGER NOT NULL CHECK(value_cents>=0),detail TEXT NOT NULL,voided INTEGER NOT NULL DEFAULT 0 CHECK(voided IN(0,1)));
+CREATE UNIQUE INDEX production_consumption ON production_events(job_id) WHERE kind='consumo';
+CREATE TABLE stock_rolls(id INTEGER PRIMARY KEY,filament_id INTEGER NOT NULL REFERENCES filaments(id),label TEXT NOT NULL,added TEXT NOT NULL,minimum_grams TEXT NOT NULL DEFAULT '100',purchase_id INTEGER UNIQUE REFERENCES purchases(id) ON DELETE SET NULL);
+CREATE TABLE stock_moves(id INTEGER PRIMARY KEY,roll_id INTEGER NOT NULL REFERENCES stock_rolls(id),date TEXT NOT NULL,delta_grams TEXT NOT NULL,reason TEXT NOT NULL,ref TEXT NOT NULL UNIQUE,event_id INTEGER REFERENCES production_events(id));
+CREATE TABLE settlements(id INTEGER PRIMARY KEY,date TEXT NOT NULL,amount_cents INTEGER NOT NULL CHECK(amount_cents>0),reference TEXT NOT NULL UNIQUE,note TEXT NOT NULL DEFAULT '');
+CREATE TABLE settlement_links(settlement_id INTEGER NOT NULL REFERENCES settlements(id) ON DELETE CASCADE,order_id TEXT NOT NULL REFERENCES orders(id),amount_cents INTEGER NOT NULL CHECK(amount_cents>0),PRIMARY KEY(settlement_id,order_id));
+PRAGMA user_version=3;
+INSERT INTO audit(operation,detail) VALUES('migracao_esquema','{"from":2,"to":3}');

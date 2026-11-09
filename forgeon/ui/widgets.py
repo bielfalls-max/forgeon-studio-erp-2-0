@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QFormLayout,QLineEdit,QComboBox,QDialogButtonBox,
                               QLabel,QTableWidget,QTableWidgetItem,QAbstractItemView,QHeaderView,QPushButton,
                               QWidget,QHBoxLayout,QTextBrowser,QCheckBox,QSpinBox,QMessageBox,QMenu,QFileDialog,QApplication,QScrollArea)
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt,QTimer
 from PySide6.QtGui import QColor
 from ..business.numbers import money
 from ..business.labels import LABELS
@@ -64,9 +64,13 @@ class Table(QTableWidget):
         self.horizontalHeader().setToolTip('Clique para ordenar, arraste para reorganizar, botão direito para escolher colunas.')
         self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self.context_menu)
-        self._columns=[]
+        self._columns=[];self.persistence=None;self._loading=False
+        self._save_timer=QTimer(self);self._save_timer.setSingleShot(True);self._save_timer.timeout.connect(self.save_layout)
+        self.horizontalHeader().sectionMoved.connect(self.schedule_layout)
+        self.horizontalHeader().sectionResized.connect(self.schedule_layout)
 
     def fill(self,rows,columns=None,conflict=None):
+        self._loading=True
         hidden={key for index,(key,_) in enumerate(self._columns) if self.isColumnHidden(index)}
         self.records=rows
         columns=columns or [(k,LABELS.get(k,k)) for k in (rows[0] if rows else {'info':'Sem registros'})]
@@ -85,7 +89,7 @@ class Table(QTableWidget):
                 if value is not None and key in ('weight','grams','unit_grams','hours','unit_hours'):
                     try:value=f'{Decimal(str(value)):,.3f}'.replace(',','X').replace('.',',').replace('X','.')
                     except InvalidOperation:pass
-                if key in ('date','start','end','cost_at','snapshot_at') and isinstance(value,str):
+                if key in ('date','start','end','cost_at','snapshot_at','recorded','created','due','added') and isinstance(value,str):
                     try: value=datetime.strptime(value[:10],'%Y-%m-%d').strftime('%d/%m/%Y')+value[10:]
                     except ValueError: pass
                 item=SortItem(str(value))
@@ -102,6 +106,30 @@ class Table(QTableWidget):
         self.resizeColumnsToContents()
         for col in range(self.columnCount()):
             self.setColumnWidth(col,min(360,max(100,self.columnWidth(col))))
+        self.restore_layout();self._loading=False
+
+    def set_hidden(self,index,hidden):
+        self.setColumnHidden(index,hidden);self.schedule_layout()
+
+    def schedule_layout(self,*args):
+        if not self._loading and self.persistence:self._save_timer.start(350)
+
+    def save_layout(self):
+        if not self.persistence or not self._columns:return
+        from ..business.organization import set_preference
+        store,key=self.persistence;header=self.horizontalHeader()
+        set_preference(store,'table:'+key,{'order':[self._columns[header.logicalIndex(v)][0] for v in range(self.columnCount())],
+            'hidden':[key for i,(key,_) in enumerate(self._columns) if self.isColumnHidden(i)],'widths':{key:self.columnWidth(i) for i,(key,_) in enumerate(self._columns)}})
+
+    def restore_layout(self):
+        if not self.persistence:return
+        from ..business.organization import preference
+        store,key=self.persistence;config=preference(store,'table:'+key,{})
+        keys=[key for key,_ in self._columns];header=self.horizontalHeader()
+        for visual,key in enumerate([k for k in config.get('order',[]) if k in keys]):header.moveSection(header.visualIndex(keys.index(key)),visual)
+        for i,(key,_) in enumerate(self._columns):
+            self.setColumnHidden(i,key in config.get('hidden',[]))
+            if key in config.get('widths',{}):self.setColumnWidth(i,max(60,min(1200,int(config['widths'][key]))))
 
     def selected(self):
         row=self.currentRow()
@@ -113,7 +141,7 @@ class Table(QTableWidget):
         menu=QMenu(self)
         for index,(key,label) in enumerate(self._columns):
             action=menu.addAction(label);action.setCheckable(True);action.setChecked(not self.isColumnHidden(index))
-            action.toggled.connect(lambda checked,i=index:self.setColumnHidden(i,not checked))
+            action.toggled.connect(lambda checked,i=index:self.set_hidden(i,not checked))
         menu.exec(self.horizontalHeader().mapToGlobal(point))
 
     def visible_columns(self):
@@ -131,6 +159,7 @@ class Table(QTableWidget):
 
     def show_all_columns(self):
         for column in range(self.columnCount()):self.setColumnHidden(column,False)
+        self.schedule_layout()
 
     def visible_records(self):
         result=[]
@@ -154,10 +183,16 @@ class Page(QWidget):
     def __init__(self,title,subtitle=''):
         super().__init__()
         self.layout=QVBoxLayout(self); self.layout.setContentsMargins(26,24,26,22); self.layout.setSpacing(14)
-        heading=QLabel(title); heading.setObjectName('pageTitle'); self.layout.addWidget(heading)
+        self.page_title=title
+        top=QHBoxLayout();heading=QLabel(title);heading.setObjectName('pageTitle');top.addWidget(heading,1)
+        self.help_button=QPushButton('ⓘ Como usar');self.help_button.setObjectName('helpButton');self.help_button.setToolTip('Ajuda desta aba · F1');self.help_button.clicked.connect(self.show_usage);top.addWidget(self.help_button);self.layout.addLayout(top)
         if subtitle:
             sub=QLabel(subtitle); sub.setWordWrap(True); sub.setObjectName('subtitle'); self.layout.addWidget(sub)
         self.toolbar=FlowLayout(); self.layout.addLayout(self.toolbar)
+
+    def show_usage(self):
+        from .help import show_help
+        show_help(self,self.page_title)
 
     def button(self,text,callback,primary=False):
         b=QPushButton(text)
@@ -223,6 +258,7 @@ QTabBar::tab { padding: 10px 16px; margin: 0px 4px 0px 0px; border-radius: 8px; 
 QTabBar::tab:selected { color: #ffd1ae; background: #4a3c34; }
 QProgressBar { border: 1px solid #3c526b; border-radius: 6px; background: #142338; text-align: center; min-height: 17px; }
 QProgressBar::chunk { background: #b77c52; border-radius: 5px; }
+QPushButton#helpButton { padding: 7px 10px; font-size: 11px; border-radius: 8px; background: rgba(22,42,62,170); }
 QMenu::item { padding: 8px 18px; }
 QMenu::item:selected { background: #4a3c34; }
 QToolTip { background: #203650; color: #f2e9df; border: 1px solid #64768d; padding: 8px; }

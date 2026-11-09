@@ -34,6 +34,8 @@ class ERP:
                 self.s.db.execute('UPDATE products SET name=?,model=?,weight=?,hours=?,manual_cents=?,packaging_cents=?,other_cents=?,notes=? WHERE id=?', (*values, pid))
             else:
                 pid = self.s.db.execute('INSERT INTO products(name,model,weight,hours,manual_cents,packaging_cents,other_cents,notes) VALUES(?,?,?,?,?,?,?,?)', values).lastrowid
+            from .revisions import record_revision
+            record_revision(self,pid,'Cadastro/edição manual')
             self.s.log('produto_salvo', {'id': pid})
         return pid
 
@@ -62,6 +64,8 @@ class ERP:
                 self.s.db.execute('DELETE FROM product_colors WHERE product_id=? AND filament_id=?', (pid, fid))
             else:
                 self.s.db.execute('INSERT INTO product_colors VALUES(?,?,?) ON CONFLICT(product_id,filament_id) DO UPDATE SET grams=excluded.grams', (pid, fid, str(grams)))
+            from .revisions import record_revision
+            record_revision(self,pid,'Alteração de cor/gramas')
             self.s.log('cor_produto', {'produto': pid, 'filamento': fid, 'gramas': str(grams)})
 
     def copy_costs(self, source, target):
@@ -74,6 +78,8 @@ class ERP:
                               (p['weight'], p['hours'], p['manual_cents'], p['packaging_cents'], p['other_cents'], target))
             self.s.db.execute('DELETE FROM product_colors WHERE product_id=?', (target,))
             self.s.db.execute('INSERT INTO product_colors SELECT ?,filament_id,grams FROM product_colors WHERE product_id=?', (target, source))
+            from .revisions import record_revision
+            record_revision(self,target,'Cópia de custos e cores')
             self.s.log('copiar_custos', {'origem': source, 'destino': target})
 
     def save_settings(self, data):
@@ -169,7 +175,9 @@ class ERP:
         if grams <= 0:
             raise ValueError('Peso comprado deve ser positivo.')
         with self.s.transaction():
-            self.s.db.execute('INSERT INTO purchases(date,filament_id,grams,amount_cents,freight_cents) VALUES(?,?,?,?,?)', (day(date), fid, str(grams), cents(amount), cents(freight)))
+            purchase_id=self.s.db.execute('INSERT INTO purchases(date,filament_id,grams,amount_cents,freight_cents) VALUES(?,?,?,?,?)', (day(date), fid, str(grams), cents(amount), cents(freight))).lastrowid
+            from .workshop import add_roll
+            add_roll(self.s,fid,f'Compra #{purchase_id}',grams,date,purchase_id=purchase_id)
             self.s.log('compra_filamento', {'filamento': fid})
 
     def freeze_missing_costs(self):

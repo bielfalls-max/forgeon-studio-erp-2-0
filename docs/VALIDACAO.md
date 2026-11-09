@@ -68,3 +68,12 @@ O ícone, a paisagem e as notas são recursos locais incluídos no pacote. Não 
 ## HF02 — produção e importação
 
 A suíte acrescenta cadastro multi-placa, divisão por produtos completos, planilha sintética com dimensão A1 incorreta e cabeçalhos repetidos, preferência de taxas líquidas, pedidos multi-itens, identificação de período, correspondência exata de variação, conflito de SKU, snapshots preservados ao reimportar, cadastro posterior de receitas, conversão de banco/backup de esquema 1, assistente real de cadastro e abertura automática do relatório. Os testes públicos são exclusivamente sintéticos. Arquivos particulares fornecidos pelo usuário foram exercitados apenas em banco temporário local, sem inclusão no GitHub ou no instalador. A execução nativa e a quantidade final de testes aprovados constam dos anexos da Release.
+
+
+## Pacote cumulativo HF03 a HF05 — 2.0.5 — 09/11/2026
+
+No Linux, 96 testes aprovados com Qt real offscreen; dependências consistentes e compilação dos módulos sem erros. Inclui 17 novos testes de reserva versus baixa, idempotência, rollback em falta de uma cor, perdas/estornos, compras e fluxo físico separado, pedidos alterados, histórico de receitas, simulador sem escrita, repasses e datas sem duplicar vendas, importação de recebimentos transacional, filtros, privacidade do diagnóstico, ajuda nas 16 abas, persistência de colunas e restauração de esquema 2 ao 3 sem alterar a origem. Evidência local em resultado_hf05_pytest.txt.
+
+Capturas Qt offscreen das novas telas e filtros foram inspecionadas. O teste do executável empacotado agora também exercita baixa de lote, perda/estorno, simulador e recebimento em banco temporário. O fluxo Windows exige 16 telas no executável e no programa instalado, testes nativos aprovados e migração preservando dados/backups antes de publicar. Relatórios dessa execução acompanham a versão no GitHub.
+
+Validação manual no Windows 10/11, escalas de tela e arquivos reais continua pendente. Não há integração bancária/impressora ou medição automática do consumo; use os guias contextuais para os limites dos indicadores.

@@ -1,5 +1,9 @@
 # Hotfixes e atualização manual
 
+## HF03 a HF05 — versão 2.0.5 — 09/11/2026
+
+Instalador cumulativo: uma atualização inclui as três etapas, sem apagar dados. Veja o [guia](HF03_05_GUIA.md). Cada aba possui ajuda no canto superior direito.
+
 ## HF01 — versão 2.0.1 — Alpes — 06/11/2026
 
 Veja as [notas completas incluídas no aplicativo](../forgeon/assets/CHANGELOG.md). Este hotfix preserva o esquema do banco ERP 2.0.0 e os custos congelados. Adiciona o tema de vidro fosco com paisagem dos Alpes, identidade visual com ícone do Banguela, modo foco, indicadores em cartões, gráficos com filtros, PDF/PNG e organização de colunas.

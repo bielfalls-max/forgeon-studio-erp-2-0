@@ -52,6 +52,7 @@ def templates(folder):
         'estatisticas': ['Anúncio','Receita','Pedidos'],
         'produtos': ['Nome','Modelo','Peso g','Horas','Custo manual R$','Embalagem R$','Outros R$','Observações'],
         'despesas': ['Data','Categoria','Descrição','Valor R$'],
+        'repasses': ['Data','Referência','Valor recebido R$','Pedido ID','Valor vinculado R$'],
         'filamentos': ['Material','Cor','Preço kg R$'],
     }
     for name, headers in definitions.items():

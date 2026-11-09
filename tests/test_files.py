@@ -62,7 +62,7 @@ def test_xlsx_read_zero_mask_and_no_formula(tmp_path):
 
 def test_empty_templates_and_catalog_transaction(erp,tmp_path):
     templates(tmp_path)
-    assert len(list(tmp_path.glob('modelo_*.xlsx')))==5
+    assert len(list(tmp_path.glob('modelo_*.xlsx')))==6
     for path in tmp_path.glob('modelo_*.xlsx'):
         _,rows,_=read_xlsx(path)
         assert rows==[]

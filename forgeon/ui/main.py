@@ -8,13 +8,15 @@ import json
 from PySide6.QtWidgets import (QMainWindow,QWidget,QHBoxLayout,QVBoxLayout,QListWidget,QLabel,QStackedWidget,
     QLineEdit,QPushButton,QDialog,QMessageBox,QFileDialog,QComboBox,QTextBrowser,QInputDialog,QCheckBox,QTabWidget,QGridLayout,QScrollArea,QApplication)
 from .widgets import Page,Form,Table,preview,STYLE
+from .management import ManagementMixin
+from ..business import organization as org, management as mgmt
 from .visual import MountainBackdrop,GlassCard,MetricCard,ASSETS,app_icon
 from .charts import ChartCard
 from .updates import UpdatesPage
 from .production import SlicingProductDialog,hours_text,number_text
 from ..version import VERSION,HOTFIX
 from PySide6.QtCore import Qt,QUrl
-from PySide6.QtGui import QPixmap,QTextDocument,QPdfWriter,QPageSize,QFont
+from PySide6.QtGui import QPixmap,QTextDocument,QPdfWriter,QPageSize,QFont,QShortcut,QKeySequence
 from ..business.numbers import money,day
 from ..business.labels import LABELS
 from ..reports.finance import report,monthly
@@ -39,7 +41,7 @@ def text(value):
     return html.escape(str(value))
 
 
-class MainWindow(QMainWindow):
+class MainWindow(ManagementMixin,QMainWindow):
     def __init__(self,erp):
         super().__init__()
         self.erp=erp; self.s=erp.s
@@ -48,7 +50,7 @@ class MainWindow(QMainWindow):
         self.setStyleSheet(STYLE)
         root=MountainBackdrop(); self.backdrop=root; self.setCentralWidget(root); layout=QHBoxLayout(root); layout.setContentsMargins(16,16,0,14); layout.setSpacing(0)
         root.focus_mode=self.s.settings().get("appearance_focus","0")=="1"
-        sidebar=GlassCard(); sidebar.setFixedWidth(224);sl=sidebar.body;sl.setContentsMargins(14,20,14,16)
+        sidebar=GlassCard(); self.sidebar=sidebar; sidebar.setFixedWidth(224);sl=sidebar.body;sl.setContentsMargins(14,20,14,16)
         logo=QLabel();logo.setPixmap(QPixmap(str(ASSETS/'forgeon-dragon.png')).scaled(54,54,Qt.AspectRatioMode.KeepAspectRatio,Qt.TransformationMode.SmoothTransformation))
         identity=QHBoxLayout();identity.addWidget(logo)
         names=QVBoxLayout();brand=QLabel('FORGEON');brand.setObjectName('brand');names.addWidget(brand)
@@ -63,11 +65,14 @@ class MainWindow(QMainWindow):
         builders=[('Visão geral',self.build_dashboard),('Produtos',self.build_products),('Custos e cores',self.build_colors),
                   ('Precificação',self.build_pricing),('Catálogo e SKUs',self.build_skus),('Pedidos',self.build_orders),
                   ('Importações',self.build_imports),('Financeiro',self.build_finance),('Relatórios',self.build_reports),
-                  ('Configurações',self.build_settings),('Atualizações',self.build_updates)]
+                  ('Configurações',self.build_settings),('Atualizações',self.build_updates),('Pendências',self.build_pending),('Produção',self.build_production),('Estoque',self.build_stock),('Simulador',self.build_simulator),('Repasses',self.build_receipts)]
+        self.nav_titles=[title for title,_ in builders]
         for title,builder in builders:
             page,refresh=builder(); self.nav.addItem(title); self.stack.addWidget(page); self.refreshers.append(refresh)
         self.nav.currentRowChanged.connect(self.change_page)
         self.nav.setCurrentRow(0)
+        self.install_utilities()
+        self.apply_appearance()
         self.statusBar().showMessage(f'FORGEON {VERSION}  •  Gestão local  •  Internet somente quando você consulta ou baixa atualizações')
 
     @guarded
@@ -116,7 +121,7 @@ class MainWindow(QMainWindow):
         self.dashboard_grid.addWidget(self.dashboard_chart,3,0,1,3)
         pending=GlassCard();title=QLabel('Prioridades do estúdio');title.setObjectName('sectionTitle');pending.body.addWidget(title)
         self.dashboard_pending=QLabel();self.dashboard_pending.setWordWrap(True);pending.body.addWidget(self.dashboard_pending,1)
-        review=QPushButton('Revisar catálogo →');review.clicked.connect(lambda:self.nav.setCurrentRow(4));pending.body.addWidget(review)
+        review=QPushButton('Revisar catálogo →');review.clicked.connect(lambda:self.nav.setCurrentRow(11));pending.body.addWidget(review)
         self.dashboard_grid.addWidget(pending,3,3)
         self.dashboard_best=ChartCard('Produtos em destaque','Unidades vendidas no período, incluindo devoluções')
         self.dashboard_grid.addWidget(self.dashboard_best,5,0,1,2)
@@ -158,7 +163,7 @@ class MainWindow(QMainWindow):
         p=Page('Produtos e receitas de impressão','Cadastre o produto físico uma vez. Gramas por cor, tempo e custo alimentam pedidos, relatórios e precificação.')
         self.product_search=QLineEdit();self.product_search.setMinimumWidth(220);self.product_search.setPlaceholderText('Buscar produto, modelo ou SKU');self.product_search.textChanged.connect(lambda:self.update_products());p.toolbar.addWidget(self.product_search)
         p.button('Cadastrar via 3MF / G-code',self.slicing,True);p.button('+ Cadastro manual',lambda:self.edit_product())
-        p.button('Editar',lambda:self.edit_product(self.products_table.selected()['id']));p.button('Arquivar / reativar',self.archive_product);p.button('Exportar XLSX',lambda:self.export_rows('Produtos',self.product_rows()))
+        p.button('Editar',lambda:self.edit_product(self.products_table.selected()['id']));p.button('Histórico da receita',self.show_recipe_history);p.button('Arquivar / reativar',self.archive_product);p.button('Exportar XLSX',lambda:self.export_rows('Produtos',self.product_rows()))
         self.show_archived=QCheckBox('Incluir arquivados');self.show_archived.stateChanged.connect(lambda:self.update_products());p.toolbar.addWidget(self.show_archived)
         stats=QHBoxLayout();self.product_metrics=[]
         for title,caption in [('Produtos cadastrados','Produtos físicos ativos'),('Receitas completas','Peso, tempo e custo disponíveis'),('Origens vinculadas','Anúncios usando seus cadastros')]:
@@ -482,8 +487,10 @@ class MainWindow(QMainWindow):
                 matched=self.erp.match_product(i['title'],i['variation'])
                 flat.append({**{k:v for k,v in o.items() if k not in ('items','financial')},**i,**financial,'produto_identificado':self.erp.product(matched)['name'] if matched else 'Revisar vínculo/cadastrar receita'})
         if not orders:raise ValueError('Nenhum pedido encontrado.')
+        comparison,identical=org.compare_import(self.s,orders,path)
+        if not preview(self,'Comparação da importação',comparison,'Arquivo já importado: '+('sim' if identical else 'não')+'. Novos, alterados e inalterados são comparados antes de gravar; custos congelados permanecem preservados.'):return
         if preview(self,'Prévia · identificação por variação exata; SKUs isolados não unem produtos',flat,'\n'.join(warnings)):
-            backup=import_orders(self.erp,orders,period);self.dashboard_month.setText(period['active_month']);self.report_start.setText(period['start']);self.report_end.setText(period['end']);self.report_product.setCurrentIndex(0);self.report_status.setCurrentIndex(0);self.nav.setCurrentRow(8);self.report_tabs.setCurrentIndex(7);self.update_report()
+            backup=import_orders(self.erp,orders,period);org.record_import(self.s,path,period,comparison);self.dashboard_month.setText(period['active_month']);self.report_start.setText(period['start']);self.report_end.setText(period['end']);self.report_product.setCurrentIndex(0);self.report_status.setCurrentIndex(0);self.nav.setCurrentRow(8);self.report_tabs.setCurrentIndex(7);self.update_report()
             self.info(f'{len(orders)} pedidos importados no período identificado.\nValores separados em colunas. Receitas reconhecidas por variação exata alimentam gramas, horas e custos.\nBackup anterior: {backup}\nRevise as origens sem vínculo; custos faltantes não viram zero.')
 
     @guarded
@@ -560,7 +567,7 @@ class MainWindow(QMainWindow):
             fields += [('fid','Filamento',options),('grams','Peso comprado (g)',r['grams']),('amount','Material (R$)',str(Decimal(r['amount_cents'])/100)),('freight','Frete (R$)',str(Decimal(r['freight_cents'])/100))]
         else:
             fields += [('category','Categoria',r['category']),('description','Descrição',r['description']),('amount','Valor (R$)',str(Decimal(r['amount_cents'])/100))]
-        v=self.form('Editar lançamento',fields)
+        v=self.form('Editar lançamento',fields,'Editar compras não altera a massa nem o material dos rolos já cadastrados. Confira e corrija o saldo físico em Estoque.' if is_purchase else '')
         if not v:return
         d=day(v['date']); amount=cents(v['amount'])
         if is_purchase:
@@ -577,7 +584,7 @@ class MainWindow(QMainWindow):
     def delete_financial(self):
         purchase=self.finance_tabs.currentIndex()==1
         r=(self.purchases_table if purchase else self.expenses_table).selected()
-        if self.ask('Excluir lançamento?',f"Excluir o lançamento #{r['id']}? Será criado backup e registro no histórico."):
+        if self.ask('Excluir lançamento?',f"Excluir o lançamento #{r['id']}? Será criado backup e registro no histórico. A movimentação física do estoque é independente: confira e ajuste os rolos na aba Estoque."):
             self.s.backup()
             with self.s.transaction():
                 if purchase:self.s.db.execute('DELETE FROM purchases WHERE id=?',(r['id'],))
@@ -595,6 +602,7 @@ class MainWindow(QMainWindow):
         for label,value in [('Todos os status',''),('Ativos','ativo'),('Cancelados','cancelado'),('Devoluções','devolucao')]:self.report_status.addItem(label,value)
         p.toolbar.addWidget(self.report_status)
         p.button('Consultar',self.update_report,True); p.button('Exportar XLSX',self.export_report);p.button('Exportar PDF',self.export_report_pdf)
+        self.build_report_filters(p)
         self.report_tabs=QTabWidget(); p.layout.addWidget(self.report_tabs)
         self.report_browser=QTextBrowser(); self.best_table=Table(); self.consumption_table=Table(); self.monthly_table=Table(); self.stats_table=Table()
         for label,widget in [('Resultado',self.report_browser),('Mais vendidos',self.best_table),('Consumo',self.consumption_table),('Histórico mensal',self.monthly_table),('Estatísticas de anúncios',self.stats_table)]:self.report_tabs.addTab(widget,label)
@@ -603,35 +611,41 @@ class MainWindow(QMainWindow):
         for index,card in enumerate(self.report_charts):grid.addWidget(card,index//2,index%2)
         graph_scroll.setWidget(graph_content);self.report_tabs.addTab(graph_scroll,'Gráficos')
         self.usage_items_table=Table();self.financial_orders_table=Table();self.report_tabs.addTab(self.usage_items_table,'Itens · gramas e horas');self.report_tabs.addTab(self.financial_orders_table,'Valores por pedido')
+        self.performance_table=Table();self.report_tabs.addTab(self.performance_table,'Desempenho de produtos')
         remove=QPushButton('Excluir linha de estatísticas selecionada (com backup)'); remove.clicked.connect(self.delete_stat); p.layout.addWidget(remove);remove.hide();self.report_tabs.currentChanged.connect(lambda index:remove.setVisible(index==4))
         return p,self.refresh_reports
 
     def refresh_reports(self):
+        status=self.report_status.currentData();self.report_status.blockSignals(True)
+        while self.report_status.count()>4:self.report_status.removeItem(4)
+        for row in self.s.rows('SELECT DISTINCT status FROM orders ORDER BY status'):self.report_status.addItem(row['status'],'texto:'+row['status'])
+        self.report_status.setCurrentIndex(max(0,self.report_status.findData(status)));self.report_status.blockSignals(False)
         current=self.report_product.currentData(); self.report_product.clear(); self.report_product.addItem('Todos os produtos',None)
         for name,pid in self.product_options():self.report_product.addItem(name,pid)
         if current:self.report_product.setCurrentIndex(max(0,self.report_product.findData(current)))
         self.update_report()
 
     def current_report(self):
-        return report(self.erp,self.report_start.text(),self.report_end.text(),self.report_product.currentData(),self.report_status.currentData())
+        return report(self.erp,self.report_start.text(),self.report_end.text(),self.report_product.currentData(),self.report_status.currentData(),self.report_filters())
 
     @guarded
     def update_report(self):
         r=self.current_report()
+        self.performance_table.fill(mgmt.product_performance(self.erp,self.report_start.text(),self.report_end.text()),[('product','Produto'),('qty','Unidades'),('gross_cents','Receita'),('contribution_cents','Contribuição'),('hours','Horas'),('profit_hour_cents','Contribuição/h'),('partial','Parcial')])
         labels={'gross_cents':'Vendas brutas','refunds_cents':'Reembolsos efetivos','fees_cents':'Taxas retidas','production_cents':'Produção (custos congelados)',
-                'expenses_cents':'Despesas gerais do período','purchases_cents':'Compras de filamento + frete (somente caixa)','operating_cents':'Resultado operacional',
+                'losses_cents':'Perdas de produção (custo estimado)','received_cents':'Repasses recebidos no período','received_cash_cents':'Recebimentos menos despesas e compras','expenses_cents':'Despesas gerais do período','purchases_cents':'Compras de filamento + frete (somente caixa)','operating_cents':'Resultado operacional',
                 'cash_cents':'Caixa estimado','stats_cents':'Estatísticas — comparação separada','difference_cents':'Estatísticas menos pedidos brutos'}
         self.report_browser.setHtml(f"<h2 style='color:#ffb574'>{'DADOS PARCIAIS' if r['partial'] else 'Fontes conciliadas no período'}</h2><p>{r['orders_count']} pedidos · {r['pending_items']} itens sem custo</p>"+
             '<table width="90%">'+''.join(f'<tr><td style="padding:9px">{v}</td><td>{money(r[k])}</td></tr>' for k,v in labels.items())+'</table>'+
             '<p>Receita dos produtos usa subtotais menos cupons financiados pelo vendedor. Frete pago pelo comprador, Valor Total e Total global são referências separadas, não receitas adicionais. Descontos de preço já estão no preço acordado; não são abatidos novamente.</p>'+
-            '<p>Resultado = vendas − reembolsos − taxas − produção − despesas. Compra de filamento não é novamente descontada do resultado.</p>'+
+            '<p>Resultado = vendas − reembolsos − taxas − produção − perdas registradas − despesas. Compra de filamento não é novamente descontada do resultado.</p>'+
             '<p>Caixa estimado = vendas − reembolsos − taxas − despesas − compras de filamento. É uma aproximação com datas de pedidos e lançamentos, sem conciliação de repasses, sem todas as saídas de embalagem/energia e sem saldo inicial. Não é saldo bancário.</p>'+
-            '<p>Cancelados são excluídos de vendas e produção; produção perdida deve ser lançada como despesa. Devoluções mantêm o custo de produção: não se presume retorno ao estoque. Preencha o reembolso efetivo; valor ausente causa DADOS PARCIAIS.</p>'+
-            '<p>Filtro por produto rateia total, taxas e reembolso pelo valor dos itens. Despesas e compras continuam gerais do período; não se trata de lucro líquido isolado do produto. Histórico mensal abrange todos os produtos e status, sem esses filtros.</p>'+
+            '<p>Cancelados são excluídos de vendas e produção; registre perdas na aba Produção, sem duplicar esse custo em Despesas. Devoluções mantêm o custo de produção: não se presume retorno ao estoque. Preencha o reembolso efetivo; valor ausente causa DADOS PARCIAIS.</p>'+
+            '<p>Filtro por produto rateia total, taxas e reembolso pelo valor dos itens. Despesas e compras continuam gerais do período; não se trata de lucro líquido isolado do produto. Histórico mensal e Desempenho abrangem o período geral. Perdas são filtradas apenas por período/produto, sem rateio por SKU, cor ou status; repasses e caixa por recebimentos são gerais do período.</p>'+
             '<p>Estatísticas são agrupadas por anúncio e período. Períodos que cruzam o filtro não são rateados: constam na aba de estatísticas, mas não no total comparável. Contagem de pedidos por anúncio não equivale a pedidos únicos da loja.</p>')
         self.report_charts[0].caption.setText(('DADOS PARCIAIS · ' if r['partial'] else '')+'Vendas brutas · filtros atuais')
         self.report_charts[0].line(r['sales_by_day'])
-        self.report_charts[1].donut([('Produção',r['production_cents']),('Taxas',r['fees_cents']),('Despesas',r['expenses_cents']),('Reembolsos',r['refunds_cents'])])
+        self.report_charts[1].donut([('Produção',r['production_cents']),('Perdas',r['losses_cents']),('Taxas',r['fees_cents']),('Despesas',r['expenses_cents']),('Reembolsos',r['refunds_cents'])])
         self.report_charts[2].bars(r['best_sellers'],'product','qty')
         consumption={}
         for item in r['consumption']:
@@ -639,7 +653,7 @@ class MainWindow(QMainWindow):
         self.report_charts[3].bars([{'color':key,'grams':str(value)} for key,value in sorted(consumption.items(),key=lambda item:-item[1])],'color','grams','g')
         self.best_table.fill(r['best_sellers'],[('product','Produto físico / origem sem vínculo'),('qty','Unidades (inclui devoluções)'),('revenue_cents','Valor dos itens, antes de reembolsos')])
         self.consumption_table.fill(r['consumption'],[('month','Mês'),('fortnight','Quinzena'),('material','Material'),('color','Cor'),('grams','Consumo g')])
-        self.monthly_table.fill(monthly(self.erp),[('month','Mês'),('gross_cents','Vendas'),('production_cents','Produção'),('expenses_cents','Despesas'),('operating_cents','Resultado'),('cash_cents','Caixa estimado'),('partial','Dados parciais')])
+        self.monthly_table.fill(monthly(self.erp),[('month','Mês'),('gross_cents','Vendas'),('production_cents','Produção'),('losses_cents','Perdas'),('received_cents','Recebido'),('expenses_cents','Despesas'),('operating_cents','Resultado'),('cash_cents','Caixa estimado'),('partial','Dados parciais')])
         self.usage_items_table.fill(r['usage_items'],[('order_id','Pedido'),('variation','Variação vendida'),('product','Produto físico / pendência'),('listing','Anúncio de origem'),('original_sku','SKU original'),('qty','Unidades'),('unit_grams','g/un.'),('grams','Total g'),('unit_hours','h/un.'),('hours','Total h'),('cost_cents','Custo/un.'),('production_cents','Produção'),('snapshot_at','Cadastro congelado em'),('partial','Parcial')])
         self.financial_orders_table.fill(r['financial_rows'],[('id','Pedido'),('date','Data'),('status','Status'),('gross_cents','Receita produtos'),('commission_cents','Comissão líquida'),('service_cents','Serviço líquido'),('transaction_cents','Transação'),('fees_cents','Taxas totais'),('net_cents','Após taxas/reembolso'),('buyer_shipping_cents','Frete comprador · referência'),('buyer_total_cents','Valor Total · referência'),('market_total_cents','Total global · referência')])
         self.stats_table.fill(r['stats'],[('start','Início'),('end','Fim'),('listing','Anúncio (não é produto físico)'),('revenue_cents','Receita resumo'),('orders_count','Pedidos por anúncio'),('partial','Parcial')])
@@ -648,12 +662,12 @@ class MainWindow(QMainWindow):
     def export_report(self):
         r=self.current_report()
         summary=[{'indicador':LABELS.get(k,k),'valor':money(v) if k.endswith('_cents') else str(v)} for k,v in r.items() if not isinstance(v,list)]
-        self.export_rows('Relatório',[],{'Resumo':summary,'Mais vendidos':r['best_sellers'],'Consumo':r['consumption'],'Uso por item':r['usage_items'],'Uso por pedido':r['usage_orders'],'Valores por pedido':r['financial_rows'],'Mensal':monthly(self.erp),'Estatísticas':r['stats'],'Pedidos':r['orders'],'Despesas':r['expenses'],'Compras':r['purchases']})
+        self.export_rows('Relatório',[],{'Resumo':summary,'Mais vendidos':r['best_sellers'],'Consumo':r['consumption'],'Uso por item':r['usage_items'],'Uso por pedido':r['usage_orders'],'Valores por pedido':r['financial_rows'],'Mensal':monthly(self.erp),'Estatísticas':r['stats'],'Pedidos':r['orders'],'Despesas':r['expenses'],'Compras':r['purchases'],'Perdas':r['losses'],'Desempenho':mgmt.product_performance(self.erp,self.report_start.text(),self.report_end.text())})
 
     def build_settings(self):
         p=Page('Configurações e proteção dos dados','Parâmetros locais, backup consistente e histórico de operações. Este aplicativo usa apenas o banco novo do ERP 2.0.')
         p.button('Editar parâmetros',self.edit_settings,True); p.button('Criar backup',self.backup); p.button('Restaurar backup',self.restore); p.button('Verificar integridade',self.integrity)
-        p.button('Histórico',self.audit)
+        p.button('Histórico',self.audit);p.button('Aparência e acessibilidade',self.appearance_settings);p.button('Exportar diagnóstico',self.export_diagnostic)
         self.settings_browser=QTextBrowser(); p.layout.addWidget(self.settings_browser)
         return p,self.update_settings
 
@@ -731,8 +745,9 @@ class MainWindow(QMainWindow):
         if not path:return
         document=QTextDocument();document.setDefaultFont(QFont('Segoe UI',10))
         html_text=f"<h1>FORGEON STUDIO · Relatório gerencial</h1><p>Versão {VERSION} · {date.fromisoformat(r['start']).strftime('%d/%m/%Y')} a {date.fromisoformat(r['end']).strftime('%d/%m/%Y')}</p><p>Produto: {text(self.report_product.currentText())} · Status: {text(self.report_status.currentText())}</p><h2>{'DADOS PARCIAIS' if r['partial'] else 'Fontes conciliadas no período'}</h2>"
+        html_text+='<p>Filtros adicionais: '+text(json.dumps(self.report_filters(),ensure_ascii=False))+'</p>'
         html_text+='<table width="100%" border="0" cellspacing="8">'
-        for key,label in [('gross_cents','Vendas brutas'),('refunds_cents','Reembolsos'),('fees_cents','Taxas'),('production_cents','Produção congelada'),('expenses_cents','Despesas'),('operating_cents','Resultado operacional'),('cash_cents','Caixa estimado')]:
+        for key,label in [('gross_cents','Vendas brutas'),('refunds_cents','Reembolsos'),('fees_cents','Taxas'),('production_cents','Produção congelada'),('losses_cents','Perdas registradas'),('received_cents','Repasses recebidos'),('expenses_cents','Despesas'),('operating_cents','Resultado operacional'),('cash_cents','Caixa estimado')]:
             html_text+=f'<tr><td>{label}</td><td>{money(r[key])}</td></tr>'
         html_text+='</table><p>Caixa estimado não é saldo bancário. Estatísticas não são somadas às vendas. Custos ausentes geram dados parciais. Despesas gerais permanecem do período mesmo com filtro por produto.</p><h2>Produtos mais vendidos</h2><table cellspacing="8">'
         for item in r['best_sellers'][:12]:html_text+=f"<tr><td>{text(item['product'])}</td><td>{item['qty']} un.</td><td>{money(item['revenue_cents'])}</td></tr>"
@@ -752,6 +767,8 @@ class MainWindow(QMainWindow):
             self.updates_page.task.cancel.set()
             if not self.updates_page.task.wait(16000):
                 event.ignore();self.statusBar().showMessage('Aguarde a consulta/download terminar para fechar.');return
+        for table in self.findChildren(Table):
+            table._save_timer.stop();table.save_layout();table.persistence=None
         super().closeEvent(event)
 
 

@@ -9,6 +9,7 @@ import tempfile
 
 APP_ID = 1179797298
 PROJECT = 'forgeon-studio-erp-2-new'
+LATEST_SCHEMA = 3
 DEFAULTS = {'filament_kg': '90', 'energy_kwh': '1', 'power_w': '150', 'machine_hour': '1',
             'fee_percent': '0', 'fee_fixed': '0', 'pricing_mode': 'margem', 'profit_percent': '30', 'sku_width': '5'}
 
@@ -30,7 +31,7 @@ class Store:
             try:
                 self.validate(self.db)
                 self.verify_schema(self.db)
-                if self.db.execute("PRAGMA user_version").fetchone()[0]==1:
+                if self.db.execute("PRAGMA user_version").fetchone()[0]<LATEST_SCHEMA:
                     self.backup()
                     self.migrate(self.db)
             except Exception:
@@ -44,7 +45,7 @@ class Store:
 
     @staticmethod
     def validate(connection):
-        if connection.execute('PRAGMA application_id').fetchone()[0] != APP_ID or connection.execute('PRAGMA user_version').fetchone()[0] not in (1,2):
+        if connection.execute('PRAGMA application_id').fetchone()[0] != APP_ID or connection.execute('PRAGMA user_version').fetchone()[0] not in (1,2,3):
             raise ValueError('Banco incompatível com FORGEON ERP 2.0 (projeto novo).')
         if connection.execute("SELECT value FROM meta WHERE key='project'").fetchone()[0] != PROJECT:
             raise ValueError('Identidade do banco incompatível.')
@@ -52,20 +53,22 @@ class Store:
             raise ValueError('Falha de integridade do banco.')
 
     @staticmethod
-    def migrate(connection):
-        if connection.execute('PRAGMA user_version').fetchone()[0]!=1:return
-        try:
-            connection.executescript('BEGIN IMMEDIATE;\n'+Path(__file__).with_name('migration_v2.sql').read_text(encoding='utf-8')+'\nCOMMIT;')
-        except Exception:
-            connection.rollback()
-            raise
+    def migrate(connection,target=LATEST_SCHEMA):
+        version=connection.execute('PRAGMA user_version').fetchone()[0]
+        for next_version in range(version+1,target+1):
+            try:
+                script=Path(__file__).with_name(f'migration_v{next_version}.sql').read_text(encoding='utf-8')
+                connection.executescript('BEGIN IMMEDIATE;\n'+script+'\nCOMMIT;')
+            except Exception:
+                connection.rollback()
+                raise
 
     @staticmethod
     def verify_schema(connection):
         version=connection.execute('PRAGMA user_version').fetchone()[0]
         with closing(sqlite3.connect(':memory:')) as reference:
             reference.executescript(Path(__file__).with_name('schema.sql').read_text(encoding='utf-8'))
-            if version==2:Store.migrate(reference)
+            if version>1:Store.migrate(reference,version)
             def definitions(conn):
                 return {r[0]: ' '.join(r[1].split()).lower() for r in conn.execute("SELECT name,sql FROM sqlite_master WHERE type='table'")}
             if definitions(connection)!=definitions(reference) or connection.execute("SELECT 1 FROM sqlite_master WHERE type IN('trigger','view')").fetchone():

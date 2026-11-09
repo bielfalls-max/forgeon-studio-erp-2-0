@@ -31,6 +31,7 @@ def check(destination):
                 saved = store.backup()
                 store.restore(saved)
                 with store.transaction():
+                    store.db.execute('DELETE FROM recipe_revisions WHERE product_id=?',(pid,))
                     store.db.execute('DELETE FROM products WHERE id=?', (pid,))
                 window = MainWindow(erp)
                 assert not window.windowIcon().isNull(), 'Ícone não incluído no pacote'
@@ -43,7 +44,23 @@ def check(destination):
                     app.processEvents()
                     assert window.stack.currentIndex() == index
                     result['screens'] += 1
-                assert result['screens'] == 11
+                assert result['screens'] == 16
+                # Exercise HF03–HF05 inside the packaged binary as well as the empty UI.
+                from .business import workshop,management
+                pid=erp.save_product({'name':'Produto sintético do pacote','weight':'10','hours':'1'})
+                fid=erp.filament('PLA','Preto sintético','100');erp.set_color(pid,fid,'10')
+                rid=workshop.register_roll(erp,fid,'Rolo sintético','100')
+                jid=workshop.create_job(erp,pid,2);workshop.change_state(erp,jid,'Pronto')
+                assert workshop.roll_balance(store,rid)==80
+                event=workshop.record_loss(erp,fid,'5','0','Verificação sintética')
+                workshop.void_loss(erp,event,'Estorno sintético')
+                assert workshop.roll_balance(store,rid)==80
+                assert management.simulator(erp,pid)['scenario']['total_cents']>0
+                management.save_receipt(erp,'01/11/2026','10','REPASSE-SINTETICO')
+                assert len(management.receipt_rows(erp))==1
+                for index in range(window.stack.count()):
+                    window.nav.setCurrentRow(index);app.processEvents()
+                    assert window.stack.widget(index).help_button.text()=='ⓘ Como usar'
                 store.validate(store.db)
                 assert not errors, errors
                 result['ok'] = True
