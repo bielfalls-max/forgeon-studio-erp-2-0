@@ -195,6 +195,8 @@ def test_help_all_screens_and_subtabs_and_remember_columns(app,erp,recipe,monkey
         for tabs in page.findChildren(QTabWidget):
             assert tabs.cornerWidget()
             for i in range(tabs.count()):assert not help_text(tabs.tabText(i)).startswith('# Como usar')
+    window.set_sidebar_compact(True,persist=False);assert window.nav.item(4).text()=='SKUs' and window.brand_label.isHidden()
+    window.set_sidebar_compact(False,persist=False);assert window.nav.item(4).text()=='Catálogo e SKUs'
     window.nav.setCurrentRow(1);table=window.products_table;table.set_hidden(1,True);table.horizontalHeader().moveSection(0,2);table.setColumnWidth(2,210);table.save_layout();window.close()
     second=MainWindow(erp);second.nav.setCurrentRow(1)
     assert second.products_table.isColumnHidden(1)

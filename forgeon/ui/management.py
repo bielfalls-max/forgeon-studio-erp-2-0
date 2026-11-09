@@ -369,6 +369,12 @@ class ManagementMixin:
 
     def set_sidebar_compact(self,compact,persist=True):
         self.sidebar.setFixedWidth(150 if compact else 224)
+        self.brand_label.setVisible(not compact);self.tagline_label.setVisible(not compact)
+        self.sidebar_footer.setText('Dados locais' if compact else 'SEU ESTÚDIO, EM ORDEM.\nDados locais · banco preservado')
+        short=['Painel','Produtos','Cores','Preços','SKUs','Pedidos','Importar','Finanças','Relatórios','Ajustes','Atualizar','Pendências','Produção','Estoque','Simular','Repasses']
+        self.nav.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        for index,title in enumerate(self.nav_titles):
+            self.nav.item(index).setText(short[index] if compact else title);self.nav.item(index).setToolTip(title)
         self.nav.setToolTip('Ctrl+F: buscar · F1: ajuda da aba')
         if persist:
             config=org.preference(self.s,'appearance',{});config['compact']=compact;org.set_preference(self.s,'appearance',config)
