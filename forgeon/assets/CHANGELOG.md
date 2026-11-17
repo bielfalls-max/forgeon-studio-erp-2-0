@@ -1,7 +1,8 @@
 # Notas de atualização
 
-## 2.0.7 — HF07 · Importação automática — 17/11/2026
+## 2.0.8 — HF07 · Importação automática — 17/11/2026
 
+- Exportação XLSX preserva campos pendentes como Pendente, sem falhar nem converter ausência de custo em zero.
 - Um botão reconhece pedidos detalhados e resumo gerencial Shopee; permite selecionar os dois arquivos juntos sem escolher abas ou mapear colunas nos formatos reconhecidos.
 - As abas Pedido Feito/Produto Pago são lidas juntas, com períodos identificados e bases preservadas. Totais de intervalo não são somados às linhas mensais/diárias.
 - As informações alimentam o painel, o histórico mensal e os relatórios existentes. Nenhuma nova área ou aba de gerenciamento foi criada.
