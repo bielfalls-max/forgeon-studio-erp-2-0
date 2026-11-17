@@ -2,6 +2,7 @@ from collections import defaultdict
 from decimal import Decimal
 import json
 from ..business.numbers import day,norm
+from ..business.filtering import recipe_matches
 from ..importers.sheets import status_kind
 
 
@@ -22,8 +23,7 @@ def report(erp, start, end, product_id=None, status='', filters=None):
         if filters.get('variation') and norm(filters['variation']) not in norm(i['variation']):return False
         d=json.loads(i.get('usage_detail') or i.get('cost_detail') or '{}')
         colors=d.get('colors',[])
-        if filters.get('material') and not any(norm(filters['material']) in norm(c['material']) for c in colors):return False
-        if filters.get('color') and not any(norm(filters['color']) in norm(c['color']) for c in colors):return False
+        if not recipe_matches(d,filters):return False
         complete=i['product_id'] is not None and i['cost_cents'] is not None and Decimal(d.get('grams','0'))>0 and Decimal(d.get('hours','0'))>0
         if filters.get('coverage')=='completos' and not complete:return False
         if filters.get('coverage')=='pendentes' and complete:return False
@@ -40,6 +40,7 @@ def report(erp, start, end, product_id=None, status='', filters=None):
     usage_orders=[];usage_items=[];financial_rows=[]
     total_grams=Decimal(0);total_hours=Decimal(0);planned_grams=Decimal(0);sent_grams=Decimal(0);unknown_units=0;unknown_time_units=0
     for o in orders:
+        if filters.get('order') and norm(filters['order']) not in norm(o['id']):continue
         if status:
             if status.startswith('texto:'):
                 if norm(o['status'])!=norm(status[6:]):continue

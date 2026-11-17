@@ -69,3 +69,8 @@ O script base `schema.sql` continua representando o esquema 1 deste projeto. A c
 `migration_v3.sql` acrescenta preferências, filtros salvos, revisões de receitas, histórico de importações, lotes/eventos de produção, rolos/movimentos de massa e recebimentos/vínculos. Migrações 1 e 2 publicadas são preservadas. A validação de restauração compara as tabelas com a versão declarada antes de converter em estágio.
 
 Organização, oficina e gestão ficam em módulos separados da interface. A baixa de todas as cores e o evento de conclusão formam uma transação; uma restrição única impede mais de um consumo por lote. Movimentos e estornos mantêm rastreabilidade. Reserva é derivada dos lotes abertos, sem alterar o saldo físico. Repasses são valores recebidos, separados de receita e taxas. Preferências e filtros não alteram os snapshots dos pedidos. Ajuda contextual é texto local.
+
+
+## HF06 — navegação e filtros, esquema 3 mantido
+
+`ui/navigation.py` agrupa rotas em oito áreas preservando os 16 destinos internos para atalhos e pendências. `ui/filters.py` fornece datas opcionais e seleção de produto/material/cor/pedido; `business/filtering.py` compartilha regras de consulta/exportação. `business/costs.py` calcula referência por kg da última compra com Decimal, frete e massa, sem aplicar automaticamente. Revisões de parâmetros e material ficam em preferências/auditoria; não há nova migração nem reescrita de snapshots históricos. `ui/refinement.py` conecta essas consultas à interface.

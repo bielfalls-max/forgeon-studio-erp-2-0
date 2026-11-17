@@ -1,5 +1,9 @@
 # Hotfixes e atualização manual
 
+## HF06 — versão 2.0.6 — 17/11/2026
+
+Simplificação do menu, filtros e referências de custos editáveis. Consulte a [análise e o guia](HF06_SIMPLIFICACAO.md). Instalador cumulativo, esquema 3 preservado.
+
 ## HF03 a HF05 — versão 2.0.5 — 09/11/2026
 
 Instalador cumulativo: uma atualização inclui as três etapas, sem apagar dados. Veja o [guia](HF03_05_GUIA.md). Cada aba possui ajuda no canto superior direito.

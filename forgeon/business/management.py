@@ -4,10 +4,11 @@ from datetime import date
 import json
 from .numbers import decimal,cents,day,quantity
 from .pricing import calculate,round_cents
+from .filtering import date_matches
 from ..importers.sheets import status_kind
 
 
-def simulator(erp,pid,settings=None,packaging=None,other=None,filament_change='0'):
+def simulator(erp,pid,settings=None,packaging=None,other=None,filament_change='0',period=None):
     original=erp.product(pid);colors=erp.colors(pid);config=erp.s.settings();base=calculate(original,colors,config)
     changed=dict(config);changed.update(settings or {})
     try:change=Decimal(str(filament_change).replace(',','.'))
@@ -19,7 +20,7 @@ def simulator(erp,pid,settings=None,packaging=None,other=None,filament_change='0
     revised=[{**c,'kg_cents':int((Decimal(c['kg_cents'])*factor).quantize(Decimal('1'),rounding=ROUND_HALF_UP))} for c in colors]
     if not colors:changed['filament_kg']=str(decimal(changed['filament_kg'])*factor)
     scenario=calculate(product,revised,changed)
-    sales=[r for r in erp.s.rows('SELECT i.qty,i.unit_cents,o.status FROM order_items i JOIN orders o ON o.id=i.order_id WHERE i.product_id=?',(pid,)) if status_kind(r['status'])!='cancelado']
+    sales=[r for r in erp.s.rows('SELECT i.qty,i.unit_cents,o.status,o.date FROM order_items i JOIN orders o ON o.id=i.order_id WHERE i.product_id=?',(pid,)) if status_kind(r['status'])!='cancelado' and date_matches(r['date'],period or {})]
     units=sum(r['qty'] for r in sales);avg=int((Decimal(sum(r['qty']*r['unit_cents'] for r in sales))/units).quantize(Decimal('1'),rounding=ROUND_HALF_UP)) if units else None
     at_average=None
     if avg is not None:

@@ -1,5 +1,23 @@
 # Notas de atualização
 
+## 2.0.6 — HF06 · Simplificação — 17/11/2026
+
+- Menu reorganizado: 16 entradas viram oito áreas, com funções relacionadas em subabas. Recursos e dados preservados.
+- Precificação com um editor de custos/taxas, edição direta do produto e comparação de produtos em janela própria. Simulação permanece separada de alterações reais.
+- Ajustes concentra preferências, backup, aparência, formato de SKUs e atualização; os parâmetros financeiros deixam de aparecer duplicados ali.
+- Referência editável por kg comparada ao preço pago da última compra, calculado pelo peso e incluindo frete. Aplicar esse custo exige confirmação e não altera vendas/lotes congelados.
+- Edição de material e parâmetros registra data da revisão. Sem valores reais informados, os parâmetros existentes permanecem referências; não há coleta ou presunção de preços de mercado.
+- Pedidos: datas, produto, material/cor, busca por ID/SKU/variação e status específico. Exportação de itens respeita o mesmo recorte.
+- Produtos, precificação e materiais: filtros de material/cor; combinação refere-se ao mesmo filamento.
+- Produção: datas, pedido, produto, material/cor e etapa aplicados a lotes e perdas; ações mudam conforme a subaba.
+- Estoque: datas de entrada/movimento e material/cor. Saldos e reservas continuam atuais; não se apresentam como saldo histórico.
+- Financeiro: datas, categoria/descrição e material/cor nas compras. Repasses: datas, pedido e referência, com vínculos filtrados.
+- Relatórios: filtro por pedido, período lembrado nos filtros salvos; simulador com período de vendas usado na referência.
+- Conteúdo com rolagem para janelas menores, tabelas com altura mínima e ajuda mantida no topo. Botões de cadastro redundantes substituídos por acesso ao cadastro principal.
+
+Instalador cumulativo, sem desinstalar nem apagar dados. Esquema permanece 3; preferências existentes são preservadas.
+
+
 ## 2.0.5 — HF03, HF04 e HF05 — 09/11/2026
 
 Pacote cumulativo: instale uma vez sobre a versão anterior. Banco local preservado, com backup antes da migração do esquema.

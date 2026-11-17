@@ -53,6 +53,8 @@ class ERP:
                 self.s.db.execute('UPDATE filaments SET material=?,color=?,kg_cents=? WHERE id=?', (material.strip(), color.strip(), cents(kg), fid))
             else:
                 fid = self.s.db.execute('INSERT INTO filaments(material,color,kg_cents) VALUES(?,?,?)', (material.strip(), color.strip(), cents(kg))).lastrowid
+            from .costs import stamp
+            stamp(self.s,'cost:filament:'+str(fid),{'source':'Edição manual','kg_cents':cents(kg)})
             self.s.log('filamento_salvo', {'id': fid})
         return fid
 
@@ -92,6 +94,8 @@ class ERP:
         calculate({'weight':'1','hours':'1','manual_cents':None,'packaging_cents':0,'other_cents':0}, [], data)
         with self.s.transaction():
             self.s.db.executemany('UPDATE settings SET value=? WHERE key=?', [(str(v), k) for k, v in data.items() if k in self.s.settings()])
+            from .costs import stamp
+            stamp(self.s,'cost:settings',{'source':'Parâmetros informados pelo usuário'})
             self.s.log('configuracoes', {'alteradas': list(data)})
 
     def reserve(self, code=None):

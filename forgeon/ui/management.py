@@ -88,18 +88,22 @@ class ManagementMixin:
         self.production_state=QComboBox();self.production_state.addItem('Todas as etapas','')
         for state in shop.STATES:self.production_state.addItem(state,state)
         p.toolbar.addWidget(self.production_state)
-        p.button('Sincronizar A Enviar',self.sync_production,True);p.button('Novo lote',self.new_job);p.button('Mudar etapa / Pronto',self.job_state);p.button('Atualizar previsão',self.refresh_job_recipe);p.button('Registrar perda',self.new_loss);p.button('Estornar perda',self.reverse_loss)
-        self.production_note=QLabel('Receitas de lotes são snapshots. Pedidos alterados/cancelados exigem revisão. Filtros selecionam lotes/necessidades; perdas mostram todo o histórico.');self.production_note.setWordWrap(True);self.production_note.setObjectName('badge');p.layout.addWidget(self.production_note)
+        p.button('Sincronizar A Enviar',self.sync_production,True);p.button('Novo lote',self.new_job);self.production_stage_button=p.button('Mudar etapa / Pronto',self.job_state);self.production_recipe_button=p.button('Atualizar previsão',self.refresh_job_recipe);p.button('Registrar perda',self.new_loss);self.production_reverse_button=p.button('Estornar perda',self.reverse_loss)
+        self.production_note=QLabel('Receitas de lotes são snapshots. Pedidos alterados/cancelados exigem revisão. Filtros de data usam criação nos lotes e ocorrência nas perdas; exportação segue os registros exibidos.');self.production_note.setWordWrap(True);self.production_note.setObjectName('badge');p.layout.addWidget(self.production_note)
+        self.add_filters(p,'production',dates=True,product=True,order=True,material=True,color=True,date_label='Criação do lote / data da perda')
         self.production_tabs=QTabWidget();self.jobs_table=Table();self.needs_table=Table();self.losses_table=Table()
         for title,table in [('Lotes',self.jobs_table),('Necessidades',self.needs_table),('Perdas e reimpressões',self.losses_table)]:self.production_tabs.addTab(table,title)
         p.layout.addWidget(self.production_tabs);p.button('Exportar produção',self.export_production)
+        self.production_tabs.currentChanged.connect(self.production_actions);self.production_actions(0)
         self.production_query.textChanged.connect(self.refresh_production);self.production_state.currentIndexChanged.connect(self.refresh_production)
         return p,self.refresh_production
 
     @ui_action
     def refresh_production(self,*args):
+        from ..business.filtering import date_matches,recipe_matches
+        self.production_filters.refresh_products();filters=self.production_filters.values()
         rows=shop.jobs(self.erp);q=norm(self.production_query.text());state=self.production_state.currentData()
-        selected=[r for r in rows if (not state or r['state']==state) and q in norm(f"{r['id']} {r['order_id'] or ''} {r['name']} {r['model']}")]
+        selected=[r for r in rows if (not state or r['state']==state) and date_matches(r['created'],filters) and (filters.get('product') is None or r['product_id']==filters['product']) and norm(filters.get('order','')) in norm(str(r['order_id'])) and recipe_matches(json.loads(r['recipe']),filters) and q in norm(f"{r['id']} {r['order_id'] or ''} {r['name']} {r['model']}")]
         self.jobs_table.fill(selected,[('id','Lote'),('order_id','Pedido'),('name','Produto'),('units','Unidades'),('state','Etapa'),('due','Prazo'),('grams','Filamento g'),('hours','Impressão h'),('pending','Revisão necessária'),('recipe_missing','Receita incompleta')],lambda r:bool(r['pending'] or r['recipe_missing']))
         grouped={}
         for r in selected:
@@ -107,8 +111,8 @@ class ManagementMixin:
             bucket=grouped.setdefault(r['product_id'],{'product':r['name'],'qty':0,'grams':Decimal(0),'hours':Decimal(0),'lots':0})
             bucket['qty']+=r['units'];bucket['grams']+=Decimal(r['grams']);bucket['hours']+=Decimal(r['hours']);bucket['lots']+=1
         self.needs_table.fill([{**r,'grams':str(r['grams']),'hours':str(r['hours'])} for r in grouped.values()],[('product','Produto'),('lots','Lotes abertos'),('qty','Unidades a produzir'),('grams','Gramas previstas'),('hours','Horas previstas')])
-        loss_rows=shop.losses(self.erp,'01/01/1900','31/12/9999')
-        self.losses_table.fill(loss_rows,[('id','Evento'),('date','Data'),('job_id','Lote'),('product_name','Produto'),('grams','Gramas informadas'),('hours','Horas extras'),('value_cents','Custo modelado'),('reason','Motivo'),('voided','Estornado')])
+        loss_rows=self.filtered_losses(filters,q,state)
+        self.losses_table.fill(loss_rows,[('id','Evento'),('date','Data'),('job_id','Lote'),('product_name','Produto'),('order_id','Pedido'),('material','Material'),('color','Cor'),('grams','Gramas informadas'),('hours','Horas extras'),('value_cents','Custo modelado'),('reason','Motivo'),('voided','Estornado')])
 
     @ui_action
     def sync_production(self):count=shop.sync_jobs(self.erp);self.refresh_production();self.info(f'{count} lotes criados. Pedidos sem produto identificado continuam em Pendências.')
@@ -157,6 +161,7 @@ class ManagementMixin:
         self.stock_query=QLineEdit();self.stock_query.setPlaceholderText('Buscar material, cor ou rolo');p.toolbar.addWidget(self.stock_query)
         p.button('Atualizar',self.refresh_stock,True);p.button('Cadastrar rolo/saldo físico',self.new_roll);p.button('Ajustar saldo medido',self.adjust_stock);p.button('Exportar estoque',self.export_stock)
         self.stock_note=QLabel();self.stock_note.setObjectName('badge');self.stock_note.setWordWrap(True);p.layout.addWidget(self.stock_note)
+        self.add_filters(p,'stock',dates=True,material=True,color=True,date_label='Entrada de rolos / movimentações')
         self.stock_tabs=QTabWidget();self.material_stock=Table();self.roll_stock=Table();self.moves_stock=Table()
         for title,table in [('Materiais',self.material_stock),('Rolos/lotes',self.roll_stock),('Movimentações',self.moves_stock)]:self.stock_tabs.addTab(table,title)
         p.layout.addWidget(self.stock_tabs);self.stock_query.textChanged.connect(self.refresh_stock)
@@ -164,14 +169,15 @@ class ManagementMixin:
 
     @ui_action
     def refresh_stock(self,*args):
-        q=norm(self.stock_query.text());materials=shop.stock(self.erp);rolls=shop.rolls(self.erp)
-        selected=[r for r in materials if q in norm(r['material']+' '+r['color'])]
+        from ..business.filtering import date_matches
+        filters=self.stock_filters.values();q=norm(self.stock_query.text());materials=shop.stock(self.erp);rolls=shop.rolls(self.erp)
+        selected=[r for r in materials if self.material_filter_matches(r,filters) and q in norm(r['material']+' '+r['color'])]
         self.material_stock.fill(selected,[('material','Material'),('color','Cor'),('grams','Saldo g'),('reserved_grams','Reservado g'),('available_grams','Disponível após reservas g'),('shortage_grams','Falta g'),('minimum_grams','Alerta mínimo g'),('alert','Situação')],lambda r:r['alert']!='OK')
-        self.roll_stock.fill([r for r in rolls if q in norm(r['label']+' '+r['material']+' '+r['color'])],[('id','Rolo/lote'),('label','Identificação'),('material','Material'),('color','Cor'),('grams','Saldo atual g'),('added','Entrada'),('purchase_id','Compra de origem')])
-        moves=self.s.rows('SELECT m.*,r.label,f.material,f.color FROM stock_moves m JOIN stock_rolls r ON r.id=m.roll_id JOIN filaments f ON f.id=r.filament_id ORDER BY m.id DESC LIMIT 5000')
-        self.moves_stock.fill([r for r in moves if q in norm(r['label']+' '+r['material']+' '+r['color'])],[('id','Movimento'),('date','Data'),('label','Rolo/lote'),('material','Material'),('color','Cor'),('delta_grams','Entrada/saída g'),('reason','Motivo'),('event_id','Evento produção')])
+        self.roll_stock.fill([r for r in rolls if date_matches(r['added'],filters) and self.material_filter_matches(r,filters) and q in norm(r['label']+' '+r['material']+' '+r['color'])],[('id','Rolo/lote'),('label','Identificação'),('material','Material'),('color','Cor'),('grams','Saldo atual g'),('added','Entrada'),('purchase_id','Compra de origem')])
+        moves=self.s.rows("SELECT m.*,r.label,f.material,f.color FROM stock_moves m JOIN stock_rolls r ON r.id=m.roll_id JOIN filaments f ON f.id=r.filament_id WHERE (?='' OR m.date>=?) AND (?='' OR m.date<=?) ORDER BY m.id DESC", (filters.get('start',''),filters.get('start',''),filters.get('end',''),filters.get('end','')))
+        self.moves_stock.fill([r for r in moves if self.material_filter_matches(r,filters) and q in norm(r['label']+' '+r['material']+' '+r['color'])],[('id','Movimento'),('date','Data'),('label','Rolo/lote'),('material','Material'),('color','Cor'),('delta_grams','Entrada/saída g'),('reason','Motivo'),('event_id','Evento produção')])
         unknown=sum(j['units'] for j in self.s.rows("SELECT units,recipe FROM production_jobs WHERE state IN('A produzir','Em impressão','Acabamento')") if not json.loads(j['recipe']).get('colors'))
-        self.stock_note.setText(f'{len(rolls)} rolos/lotes cadastrados · {unknown} unidades em lotes sem cor definida · reservas não são baixas · massa por receita é uma estimativa até ajuste físico.')
+        self.stock_note.setText(f'{len(rolls)} rolos/lotes cadastrados · {unknown} unidades em lotes sem cor definida · saldo/reservas sempre atuais; datas filtram entradas/movimentos · massa por receita é uma estimativa até ajuste físico.')
 
     @ui_action
     def new_roll(self):
@@ -197,6 +203,7 @@ class ManagementMixin:
         row=QHBoxLayout();self.sim_cards=[]
         for title,caption in [('Custo simulado','Por unidade'),('Preço sugerido','Conforme o cenário'),('Diferença para cadastro','Alteração no preço sugerido'),('Retorno por hora','Lucro sugerido / horas conhecidas')]:
             card=MetricCard(title,caption);row.addWidget(card);self.sim_cards.append(card)
+        self.add_filters(p,'simulation',dates=True,date_label='Vendas usadas como referência')
         p.layout.addLayout(row);self.sim_note=QLabel();self.sim_note.setWordWrap(True);self.sim_note.setObjectName('badge');p.layout.addWidget(self.sim_note)
         self.sim_table=p.table();self.sim_product.currentIndexChanged.connect(self.calculate_scenario)
         return p,self.refresh_simulator
@@ -216,7 +223,7 @@ class ManagementMixin:
             for card in self.sim_cards:card.set_value('—')
             self.sim_table.fill([],[('component','Componente'),('base_cents','Cadastro'),('scenario_cents','Cenário')]);return
         args=self.sim_scenarios.get(pid,{})
-        result=mgmt.simulator(self.erp,pid,**args);self.sim_result=result
+        result=mgmt.simulator(self.erp,pid,**args,period=self.simulation_filters.values());self.sim_result=result
         for card,value in zip(self.sim_cards,[money(result['scenario']['total_cents']),money(result['scenario']['suggested_cents']),money(result['difference_cents']),money(result['profit_hour_cents']) if result['profit_hour_cents'] is not None else 'Sem tempo']):card.set_value(value)
         rows=[]
         for key,label in [('material_cents','Filamento calculado'),('energy_cents','Energia'),('machine_cents','Máquina'),('manufacture_cents','Fabricação usada'),('packaging_cents','Embalagem'),('other_cents','Outros'),('total_cents','Custo total'),('fees_cents','Taxas sugeridas'),('profit_cents','Lucro sugerido'),('suggested_cents','Preço sugerido')]:rows.append({'component':label,'base_cents':result['base'][key],'scenario_cents':result['scenario'][key]})
@@ -256,6 +263,8 @@ class ManagementMixin:
         self.receipt_order_start=QLineEdit(self.s.settings().get('last_import_start',date.today().replace(day=1).isoformat()));self.receipt_order_end=QLineEdit(self.s.settings().get('last_import_end',date.today().isoformat()))
         for label,widget in [('Recebidos de',self.receipt_start),('até',self.receipt_end),('Pedidos de',self.receipt_order_start),('até',self.receipt_order_end)]:widget.setMaximumWidth(125);p.toolbar.addWidget(QLabel(label));p.toolbar.addWidget(widget)
         p.button('Consultar',self.refresh_receipts,True);p.button('Novo/editar repasse',self.new_receipt);p.button('Vincular a pedido',self.link_payment);p.button('Remover vínculo',self.unlink_payment);p.button('Excluir repasse',self.delete_payment);p.button('Importar XLSX',self.import_payments);p.button('Modelos',self.save_templates);p.button('Exportar',self.export_receipts)
+        self.add_filters(p,'receipts',order=True)
+        self.receipt_search=QLineEdit();self.receipt_search.setPlaceholderText('Referência ou observação');self.receipt_search.returnPressed.connect(self.refresh_receipts);p.toolbar.addWidget(self.receipt_search)
         self.receipt_note=QLabel();self.receipt_note.setObjectName('badge');self.receipt_note.setWordWrap(True);p.layout.addWidget(self.receipt_note)
         self.receipt_tabs=QTabWidget();self.receipt_table=Table();self.reconciliation_table=Table();self.receipt_links=Table()
         for title,table in [('Recebimentos',self.receipt_table),('Conciliação por pedido',self.reconciliation_table),('Vínculos de recebimentos',self.receipt_links)]:self.receipt_tabs.addTab(table,title)
@@ -264,12 +273,12 @@ class ManagementMixin:
 
     @ui_action
     def refresh_receipts(self):
-        rows=mgmt.receipt_rows(self.erp,self.receipt_start.text(),self.receipt_end.text())
+        rows,reconciled,links=self.filtered_receipts()
         self.receipt_table.fill(rows,[('id','Repasse'),('date','Recebido em'),('reference','Referência'),('amount_cents','Valor recebido'),('allocated_cents','Vinculado a pedidos'),('unallocated_cents','Ainda não vinculado'),('note','Observação')])
-        self.reconciliation_table.fill(mgmt.reconciliation(self.erp,self.receipt_order_start.text(),self.receipt_order_end.text()),[('id','Pedido'),('date','Criado em'),('status','Status'),('expected_cents','Previsão após taxas/reembolso'),('received_cents','Recebimento vinculado'),('difference_cents','Diferença'),('reconciliation','Situação')],lambda r:abs(r['difference_cents'])>1)
-        links=self.s.rows('SELECT l.*,r.reference,r.date FROM settlement_links l JOIN settlements r ON r.id=l.settlement_id ORDER BY r.date DESC')
+        self.reconciliation_table.fill(reconciled,[('id','Pedido'),('date','Criado em'),('status','Status'),('expected_cents','Previsão após taxas/reembolso'),('received_cents','Recebimento vinculado'),('difference_cents','Diferença'),('reconciliation','Situação')],lambda r:abs(r['difference_cents'])>1)
+        # Links follow the received-date range and the same ID/reference filters.
         self.receipt_links.fill(links,[('settlement_id','Repasse'),('reference','Referência'),('date','Recebido em'),('order_id','Pedido'),('amount_cents','Valor vinculado')])
-        self.receipt_note.setText(f"Recebido no período de recebimentos: {money(sum(r['amount_cents'] for r in rows))} · Não vinculado: {money(sum(r['unallocated_cents'] for r in rows))}. Datas dos pedidos e dos repasses têm filtros independentes. Vínculos mostram todo o histórico.")
+        self.receipt_note.setText(f"Recebido no período de recebimentos: {money(sum(r['amount_cents'] for r in rows))} · Não vinculado: {money(sum(r['unallocated_cents'] for r in rows))}. Datas dos pedidos e dos repasses têm filtros independentes. Vínculos seguem o período de recebimentos e os filtros de pedido/referência.")
 
     @ui_action
     def new_receipt(self):
@@ -375,6 +384,7 @@ class ManagementMixin:
         self.nav.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         for index,title in enumerate(self.nav_titles):
             self.nav.item(index).setText(short[index] if compact else title);self.nav.item(index).setToolTip(title)
+        self.nav.set_compact(compact)
         self.nav.setToolTip('Ctrl+F: buscar · F1: ajuda da aba')
         if persist:
             config=org.preference(self.s,'appearance',{});config['compact']=compact;org.set_preference(self.s,'appearance',config)
@@ -397,7 +407,7 @@ class ManagementMixin:
         from .visual import FlowLayout
         layout=FlowLayout();p.layout.addLayout(layout)
         self.report_extra={}
-        for key,label in [('sku','SKU'),('variation','Variação'),('material','Material'),('color','Cor')]:
+        for key,label in [('order','Pedido / ID'),('sku','SKU'),('variation','Variação'),('material','Material'),('color','Cor')]:
             widget=QLineEdit();widget.setPlaceholderText(label);widget.setMaximumWidth(160);layout.addWidget(widget);self.report_extra[key]=widget
         self.report_coverage=QComboBox()
         for label,value in [('Toda cobertura',''),('Receitas completas','completos'),('Receitas pendentes','pendentes')]:self.report_coverage.addItem(label,value)
@@ -416,13 +426,15 @@ class ManagementMixin:
     @ui_action
     def save_report_preset(self):
         v=self.form('Salvar filtro',[('name','Nome do filtro','')])
-        if v:org.save_preset(self.s,v['name'],{**self.report_filters(),'product':self.report_product.currentData(),'status':self.report_status.currentData()});self.reload_presets()
+        if v:org.save_preset(self.s,v['name'],{**self.report_filters(),'product':self.report_product.currentData(),'status':self.report_status.currentData(),'start':day(self.report_start.text()),'end':day(self.report_end.text())});self.reload_presets()
 
     @ui_action
     def load_report_preset(self):
         saved=self.report_presets.currentData()
         if saved is None:return
         for k,w in self.report_extra.items():w.setText(saved.get(k,''))
+        if saved.get('start'):self.report_start.setText(saved['start'])
+        if saved.get('end'):self.report_end.setText(saved['end'])
         self.report_coverage.setCurrentIndex(max(0,self.report_coverage.findData(saved.get('coverage',''))));self.report_product.setCurrentIndex(max(0,self.report_product.findData(saved.get('product'))));self.report_status.setCurrentIndex(max(0,self.report_status.findData(saved.get('status',''))));self.update_report()
 
     def clear_report_filters(self):

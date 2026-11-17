@@ -10,12 +10,14 @@ FORGEON_STUDIO_ERP_2_0/
   docs/DEPENDENCIAS_E_SEGURANCA.md
   docs/HF02_PRODUCAO.md
   docs/HF03_05_GUIA.md
+  docs/HF06_SIMPLIFICACAO.md
   docs/HOTFIXES.md
   docs/INSTALADOR_WINDOWS.md
   docs/REGRAS_FINANCEIRAS.md
   docs/VALIDACAO.md
   docs/imagens/hf01-painel.png
   docs/resultado_hf05_pytest.txt
+  docs/resultado_hf06_pytest.txt
   docs/resultado_pytest.txt
   forgeon/__init__.py
   forgeon/__main__.py
@@ -25,6 +27,8 @@ FORGEON_STUDIO_ERP_2_0/
   forgeon/assets/forgeon.ico
   forgeon/assets/swiss-alps.png
   forgeon/business/__init__.py
+  forgeon/business/costs.py
+  forgeon/business/filtering.py
   forgeon/business/labels.py
   forgeon/business/management.py
   forgeon/business/numbers.py
@@ -50,10 +54,13 @@ FORGEON_STUDIO_ERP_2_0/
   forgeon/reports/xlsx.py
   forgeon/ui/__init__.py
   forgeon/ui/charts.py
+  forgeon/ui/filters.py
   forgeon/ui/help.py
   forgeon/ui/main.py
   forgeon/ui/management.py
+  forgeon/ui/navigation.py
   forgeon/ui/production.py
+  forgeon/ui/refinement.py
   forgeon/ui/updates.py
   forgeon/ui/visual.py
   forgeon/ui/widgets.py
@@ -82,6 +89,7 @@ FORGEON_STUDIO_ERP_2_0/
   tests/test_files.py
   tests/test_hf02.py
   tests/test_hf03_05.py
+  tests/test_hf06.py
   tests/test_hotfix.py
   tests/test_orders.py
   tests/test_packaging.py

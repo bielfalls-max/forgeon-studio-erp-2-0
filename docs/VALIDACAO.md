@@ -77,3 +77,12 @@ No Linux, 96 testes aprovados com Qt real offscreen; dependências consistentes 
 Capturas Qt offscreen das novas telas e filtros foram inspecionadas. O teste do executável empacotado agora também exercita baixa de lote, perda/estorno, simulador e recebimento em banco temporário. O fluxo Windows exige 16 telas no executável e no programa instalado, testes nativos aprovados e migração preservando dados/backups antes de publicar. Relatórios dessa execução acompanham a versão no GitHub.
 
 Validação manual no Windows 10/11, escalas de tela e arquivos reais continua pendente. Não há integração bancária/impressora ou medição automática do consumo; use os guias contextuais para os limites dos indicadores.
+
+
+## HF06 — 2.0.6 — 17/11/2026
+
+Linux: 110 testes aprovados, incluindo 14 novos cenários de navegação em oito áreas, seleção/limpeza de datas, filtros consistentes em pedidos e exportação, produção/perdas, estoque atual versus datas dos movimentos, despesas/compras, repasses, período de referência no simulador, custo pago por kg com frete e aplicação explícita, preservação dos snapshots, correspondência material/cor no mesmo filamento, filtros salvos com datas, comparação de produtos e geometria sem sobreposição em janela 1100×700. Saída em resultado_hf06_pytest.txt.
+
+Capturas Qt offscreen das telas em 1440×900 e 1100×700 foram inspecionadas. O teste do pacote também exige oito áreas, visita todas as 16 telas e calcula/aplica preço de compra em banco temporário. A compilação/publicação Windows exige os testes nativos e as verificações do executável/instalador/atualização aprovadas; evidências acompanham a versão.
+
+Não se presume que tarifas de energia ou taxas comerciais estejam atualizadas sem dados reais do usuário. Validação manual no Windows 10/11, escala de tela e volume real de dados permanece necessária.

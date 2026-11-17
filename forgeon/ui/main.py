@@ -9,6 +9,8 @@ from PySide6.QtWidgets import (QMainWindow,QWidget,QHBoxLayout,QVBoxLayout,QList
     QLineEdit,QPushButton,QDialog,QMessageBox,QFileDialog,QComboBox,QTextBrowser,QInputDialog,QCheckBox,QTabWidget,QGridLayout,QScrollArea,QApplication)
 from .widgets import Page,Form,Table,preview,STYLE
 from .management import ManagementMixin
+from .refinement import RefinementMixin
+from .navigation import WorkspaceNavigation
 from ..business import organization as org, management as mgmt
 from .visual import MountainBackdrop,GlassCard,MetricCard,ASSETS,app_icon
 from .charts import ChartCard
@@ -17,7 +19,7 @@ from .production import SlicingProductDialog,hours_text,number_text
 from ..version import VERSION,HOTFIX
 from PySide6.QtCore import Qt,QUrl
 from PySide6.QtGui import QPixmap,QTextDocument,QPdfWriter,QPageSize,QFont,QShortcut,QKeySequence
-from ..business.numbers import money,day
+from ..business.numbers import money,day,norm
 from ..business.labels import LABELS
 from ..reports.finance import report,monthly
 from ..reports.xlsx import export,templates
@@ -41,7 +43,7 @@ def text(value):
     return html.escape(str(value))
 
 
-class MainWindow(ManagementMixin,QMainWindow):
+class MainWindow(RefinementMixin,ManagementMixin,QMainWindow):
     def __init__(self,erp):
         super().__init__()
         self.erp=erp; self.s=erp.s
@@ -56,11 +58,11 @@ class MainWindow(ManagementMixin,QMainWindow):
         names=QVBoxLayout();brand=QLabel('FORGEON');self.brand_label=brand;brand.setObjectName('brand');names.addWidget(brand)
         tagline=QLabel('STUDIO  /  ERP');self.tagline_label=tagline;tagline.setObjectName('muted');names.addWidget(tagline);identity.addLayout(names);sl.addLayout(identity)
         badge=QLabel(f'{VERSION}  ·  {HOTFIX.split(" ·")[0]}');badge.setObjectName('badge');sl.addWidget(badge)
-        self.nav=QListWidget();sl.addWidget(self.nav,1)
+        self.nav=WorkspaceNavigation();sl.addWidget(self.nav,1)
         self.focus_toggle=QCheckBox('Modo foco');self.focus_toggle.setChecked(root.focus_mode);self.focus_toggle.toggled.connect(self.toggle_focus);sl.addWidget(self.focus_toggle)
         footer=QLabel('SEU ESTÚDIO, EM ORDEM.\nDados locais · banco preservado');self.sidebar_footer=footer;footer.setObjectName('muted');sl.addWidget(footer)
         layout.addWidget(sidebar)
-        self.stack=QStackedWidget(); layout.addWidget(self.stack,1)
+        self.stack=QStackedWidget();workspace=QWidget();workspace_layout=QVBoxLayout(workspace);workspace_layout.setContentsMargins(16,0,0,0);workspace_layout.addWidget(self.nav.tabs);workspace_layout.addWidget(self.stack,1);layout.addWidget(workspace,1)
         self.refreshers=[]
         builders=[('Visão geral',self.build_dashboard),('Produtos',self.build_products),('Custos e cores',self.build_colors),
                   ('Precificação',self.build_pricing),('Catálogo e SKUs',self.build_skus),('Pedidos',self.build_orders),
@@ -163,7 +165,8 @@ class MainWindow(ManagementMixin,QMainWindow):
         p=Page('Produtos e receitas de impressão','Cadastre o produto físico uma vez. Gramas por cor, tempo e custo alimentam pedidos, relatórios e precificação.')
         self.product_search=QLineEdit();self.product_search.setMinimumWidth(220);self.product_search.setPlaceholderText('Buscar produto, modelo ou SKU');self.product_search.textChanged.connect(lambda:self.update_products());p.toolbar.addWidget(self.product_search)
         p.button('Cadastrar via 3MF / G-code',self.slicing,True);p.button('+ Cadastro manual',lambda:self.edit_product())
-        p.button('Editar',lambda:self.edit_product(self.products_table.selected()['id']));p.button('Histórico da receita',self.show_recipe_history);p.button('Arquivar / reativar',self.archive_product);p.button('Exportar XLSX',lambda:self.export_rows('Produtos',self.product_rows()))
+        p.button('Editar',lambda:self.edit_product(self.products_table.selected()['id']));p.button('Histórico da receita',self.show_recipe_history);p.button('Arquivar / reativar',self.archive_product);p.button('Exportar XLSX',lambda:self.export_rows('Produtos',self.visible_products()))
+        self.add_filters(p,'products',material=True,color=True)
         self.show_archived=QCheckBox('Incluir arquivados');self.show_archived.stateChanged.connect(lambda:self.update_products());p.toolbar.addWidget(self.show_archived)
         stats=QHBoxLayout();self.product_metrics=[]
         for title,caption in [('Produtos cadastrados','Produtos físicos ativos'),('Receitas completas','Peso, tempo e custo disponíveis'),('Origens vinculadas','Anúncios usando seus cadastros')]:
@@ -192,7 +195,7 @@ class MainWindow(ManagementMixin,QMainWindow):
     @guarded
     def update_products(self):
         q=self.product_search.text().casefold()
-        rows=[r for r in self.product_rows() if (self.show_archived.isChecked() or not r['archived']) and q in (r['name']+' '+r['model']+' '+r['skus']).casefold()]
+        rows=self.visible_products()
         all_rows=self.product_rows();active=[r for r in all_rows if not r['archived']]
         for card,value in zip(self.product_metrics,[len(active),sum(not self.erp.cost(r['id'])['missing'] for r in active),sum(r['origins_count'] for r in active)]):card.set_value(str(value))
         self.product_empty.setVisible(not all_rows)
@@ -220,14 +223,16 @@ class MainWindow(ManagementMixin,QMainWindow):
     def build_colors(self):
         p=Page('Custos e cores','Preço do filamento por material/cor. Informe o consumo por unidade do produto; zero remove a cor. Custos históricos já congelados são preservados.')
         p.button('+ Filamento',lambda:self.edit_filament(),True); p.button('Editar filamento',lambda:self.edit_filament(self.filament_table.selected()['id']))
-        p.button('Definir cor de produto',self.assign_color); p.button('Copiar custos e cores',self.copy_costs); p.button('Ler 3MF / G-code',self.slicing)
+        p.button('Definir cor de produto',self.assign_color); p.button('Copiar custos e cores',self.copy_costs); p.button('Produtos → Cadastro',lambda:self.nav.setCurrentRow(1))
+        self.add_filters(p,'materials',material=True,color=True)
+        p.button('Usar preço da última compra',self.use_purchase_cost)
         self.filament_table=p.table(); self.product_colors_table=p.table()
         return p,self.update_colors
 
     @guarded
     def update_colors(self):
-        self.filament_table.fill(self.s.rows('SELECT * FROM filaments ORDER BY material,color'),[('id','ID'),('material','Material'),('color','Cor'),('kg_cents','Preço por kg')])
-        self.product_colors_table.fill(self.s.rows('SELECT p.id,p.name,p.model,f.material,f.color,c.grams FROM product_colors c JOIN products p ON p.id=c.product_id JOIN filaments f ON f.id=c.filament_id ORDER BY p.name,f.color'),[('id','Produto ID'),('name','Produto'),('model','Modelo'),('material','Material'),('color','Cor'),('grams','Gramas / unidade')])
+        self.filament_table.fill(self.current_material_costs(),[('id','ID'),('material','Material'),('color','Cor'),('kg_cents','Referência editável/kg'),('purchase_kg_cents','Última compra/kg · com frete'),('purchase_date','Data da compra'),('reviewed','Revisado em')])
+        self.product_colors_table.fill([row for row in self.s.rows('SELECT p.id,p.name,p.model,f.material,f.color,c.grams FROM product_colors c JOIN products p ON p.id=c.product_id JOIN filaments f ON f.id=c.filament_id ORDER BY p.name,f.color') if self.material_filter_matches(row,self.materials_filters.values())],[('id','Produto ID'),('name','Produto'),('model','Modelo'),('material','Material'),('color','Cor'),('grams','Gramas / unidade')])
 
     @guarded
     def edit_filament(self,fid=None):
@@ -266,17 +271,19 @@ class MainWindow(ManagementMixin,QMainWindow):
     def build_pricing(self):
         p=Page('Precificação por produto','Receitas do fatiador viram custo por unidade. Margem sobre venda e acréscimo sobre custo são métodos diferentes.')
         self.pricing_product=QComboBox();self.pricing_product.setMinimumWidth(310);p.toolbar.addWidget(self.pricing_product)
-        p.button('Recalcular',self.update_price,True);p.button('Cadastrar via 3MF / G-code',self.slicing);p.button('Custos, taxas e margem',lambda:self.nav.setCurrentRow(9))
+        p.button('Recalcular',self.update_price,True);p.button('Editar custos e taxas',self.edit_settings);p.button('Editar produto',self.edit_priced_product);p.button('Preços de filamento',lambda:self.nav.setCurrentRow(2));p.button('Simular cenário',self.open_pricing_scenario)
+        self.add_filters(p,'pricing',material=True,color=True)
+        self.cost_review_label=QLabel();self.cost_review_label.setWordWrap(True);self.cost_review_label.setObjectName('badge');p.layout.addWidget(self.cost_review_label)
         metrics=QHBoxLayout();self.pricing_metrics=[]
         for title,caption in [('Filamento / unidade','Soma de todas as cores'),('Impressão / unidade','Tempo total das placas dividido pelas unidades'),('Custo / unidade','Fabricação + embalagem + outros'),('Preço sugerido','Conforme taxas e margem configuradas')]:
             card=MetricCard(title,caption);metrics.addWidget(card);self.pricing_metrics.append(card)
         p.layout.addLayout(metrics)
-        self.pricing_empty=GlassCard();label=QLabel('Nenhum produto cadastrado para precificar');label.setObjectName('sectionTitle');self.pricing_empty.body.addWidget(label)
+        self.pricing_empty=GlassCard();label=QLabel('Nenhum produto cadastrado para precificar');self.pricing_empty_label=label;label.setObjectName('sectionTitle');self.pricing_empty.body.addWidget(label)
         label=QLabel('Use Cadastrar via 3MF / G-code para ler as placas, peso e tempo do seu produto. Você também pode cadastrar manualmente em Produtos. Os valores aparecem aqui automaticamente após salvar.');label.setWordWrap(True);self.pricing_empty.body.addWidget(label);p.layout.addWidget(self.pricing_empty)
         split=QHBoxLayout();p.layout.addLayout(split,1);self.pricing_components=Table();split.addWidget(self.pricing_components,1)
         self.price_detail=QTextBrowser();split.addWidget(self.price_detail,1)
-        title=QLabel('Catálogo pronto para precificar');title.setObjectName('sectionTitle');p.layout.addWidget(title)
-        self.pricing_catalog=Table();self.pricing_catalog.setMaximumHeight(210);p.layout.addWidget(self.pricing_catalog)
+        self.pricing_catalog=Table();self.pricing_catalog.setParent(p);self.pricing_catalog.hide()
+        p.button('Comparar produtos',self.compare_pricing_products)
         self.pricing_product.currentIndexChanged.connect(lambda:self.update_price())
         self.pricing_catalog.itemSelectionChanged.connect(self.price_from_catalog)
         return p,self.update_pricing
@@ -284,12 +291,14 @@ class MainWindow(ManagementMixin,QMainWindow):
     def update_pricing(self):
         current=getattr(self,'last_product_id',None) or self.pricing_product.currentData();self.pricing_product.blockSignals(True);self.pricing_product.clear()
         self.pricing_product.addItem('Selecione um produto físico',None)
-        for name,pid in self.product_options():self.pricing_product.addItem(name,pid)
+        for row in self.priced_products():self.pricing_product.addItem(row['name']+' / '+row['model'],row['id'])
         if current:self.pricing_product.setCurrentIndex(max(0,self.pricing_product.findData(current)))
         elif self.pricing_product.count()>1:self.pricing_product.setCurrentIndex(1)
+        if self.pricing_product.currentData() is None and self.pricing_product.count()>1:self.pricing_product.setCurrentIndex(1)
         self.pricing_product.blockSignals(False)
-        self.pricing_catalog.blockSignals(True);self.pricing_catalog.fill(self.product_rows(),[('name','Produto'),('weight','Filamento g/un.'),('hours','Horas/un.'),('total_cents','Custo/un.'),('suggested_cents','Preço sugerido'),('pending','Pendências')]);self.pricing_catalog.blockSignals(False)
-        self.pricing_empty.setVisible(self.pricing_product.count()==1);self.update_price()
+        self.pricing_catalog.blockSignals(True);self.pricing_catalog.fill(self.priced_products(),[('name','Produto'),('weight','Filamento g/un.'),('hours','Horas/un.'),('total_cents','Custo/un.'),('suggested_cents','Preço sugerido'),('pending','Pendências')]);self.pricing_catalog.blockSignals(False)
+        self.pricing_empty.setVisible(self.pricing_product.count()==1);self.pricing_empty_label.setText('Nenhum produto nos filtros selecionados' if self.product_rows() else 'Nenhum produto cadastrado para precificar');self.update_price()
+        self.cost_review_label.setText(self.cost_review_text())
 
     @guarded
     def update_price(self):
@@ -297,7 +306,7 @@ class MainWindow(ManagementMixin,QMainWindow):
         if pid is None:
             for card in self.pricing_metrics:card.set_value('—')
             self.pricing_components.fill([],[('component','Composição do custo'),('amount_cents','R$/unidade')])
-            self.price_detail.setPlainText('Para começar, use o botão Cadastrar via 3MF / G-code ou faça um cadastro manual em Produtos. Nenhum peso, tempo ou custo será inventado.');return
+            self.price_detail.setPlainText('Selecione um produto ou limpe os filtros. Para cadastrar, abra Produtos → Cadastro e use 3MF / G-code ou Cadastro manual.');return
         c=self.erp.cost(pid); settings=self.s.settings()
         for card,value in zip(self.pricing_metrics,[number_text(c['grams'])+' g',hours_text(c['hours']),money(c['total_cents']),money(c['suggested_cents'])]):card.set_value(value)
         self.last_product_id=pid
@@ -368,16 +377,20 @@ class MainWindow(ManagementMixin,QMainWindow):
 
     def build_orders(self):
         p=Page('Pedidos','Cada pedido possui seu próprio total e várias linhas de itens. Reimportações preservam custos já congelados para os itens identificados.')
-        self.order_search=QLineEdit(); self.order_search.setPlaceholderText('Buscar ID, status ou SKU original'); self.order_search.textChanged.connect(lambda:self.update_orders()); p.toolbar.addWidget(self.order_search)
+        self.order_search=QLineEdit(); self.order_search.setPlaceholderText('Pedido, SKU, produto ou variação'); self.order_search.textChanged.connect(lambda:self.update_orders()); p.toolbar.addWidget(self.order_search)
         self.order_status=QComboBox()
         for label,value in [('Todos os status',''),('Ativos','ativo'),('Cancelados','cancelado'),('Devoluções / reembolsos','devolucao')]:self.order_status.addItem(label,value)
         self.order_status.currentIndexChanged.connect(lambda:self.update_orders()); p.toolbar.addWidget(self.order_status)
         p.button('Ver itens',self.order_details,True); p.button('Corrigir status / reembolso',self.edit_order); p.button('Congelar custos pendentes',self.freeze_costs)
-        p.button('Exportar',lambda:self.export_rows('Pedidos',[],{'Pedidos':self.filtered_orders(),'Itens':self.s.rows('SELECT * FROM order_items ORDER BY order_id,id')}))
+        p.button('Exportar',lambda:self.export_rows('Pedidos',[],{'Pedidos':self.filtered_orders(),'Itens':self.filtered_order_items()}))
+        self.add_filters(p,'orders',dates=True,product=True,material=True,color=True,date_label='Data do pedido')
+        note=QLabel('Filtros por produto/material/cor selecionam pedidos que contêm o item. Totais continuam completos por pedido; a exportação de itens segue os filtros.');note.setWordWrap(True);p.layout.addWidget(note)
         self.orders_table=p.table()
         return p,self.update_orders
 
     def filtered_orders(self):
+        from ..business.filtering import date_matches,item_matches
+        self.orders_filters.refresh_products();filters=self.orders_filters.values()
         q=self.order_search.text().casefold(); kind=self.order_status.currentData()
         rows=self.s.rows('SELECT o.*,count(i.id) items,sum(CASE WHEN i.cost_cents IS NULL THEN 1 ELSE 0 END) missing FROM orders o LEFT JOIN order_items i ON i.order_id=o.id GROUP BY o.id ORDER BY date DESC,id')
         result=[]
@@ -385,12 +398,13 @@ class MainWindow(ManagementMixin,QMainWindow):
             f=self.s.one('SELECT detail FROM order_financials WHERE order_id=?',(r['id'],))
             r.update(json.loads(f['detail']) if f else {})
             r['net_cents']=r['gross_cents']-r['fees_cents']-r['refund_cents']
-            skus=' '.join(x['original_sku'] for x in self.s.rows('SELECT original_sku FROM order_items WHERE order_id=?',(r['id'],)))
-            if q in (r['id']+' '+r['status']+' '+skus).casefold() and (not kind or status_kind(r['status'])==kind):result.append(r)
+            items=self.order_filter_items(r['id']);skus=' '.join(x['original_sku']+' '+x['title']+' '+x['variation'] for x in items)
+            if date_matches(r['date'],filters) and any(item_matches(i,filters) for i in items) and q in (r['id']+' '+r['status']+' '+skus).casefold() and (not kind or (norm(r['status'])==norm(kind[6:]) if kind.startswith('texto:') else status_kind(r['status'])==kind)):result.append(r)
         return result
 
     @guarded
     def update_orders(self):
+        self.refresh_order_statuses()
         self.orders_table.fill(self.filtered_orders(),[('id','ID do pedido'),('date','Data'),('status','Status'),('items','Itens'),('gross_cents','Produtos · receita'),('commission_cents','Comissão líquida'),('service_cents','Serviço líquido'),('transaction_cents','Transação'),('fees_cents','Taxas totais'),('net_cents','Após taxas'),('buyer_shipping_cents','Frete · referência'),('market_total_cents','Total global · referência'),('refund_cents','Reembolso'),('missing','Itens sem custo'),('partial','Dados parciais')])
 
     @guarded
@@ -529,7 +543,10 @@ class MainWindow(ManagementMixin,QMainWindow):
     def build_finance(self):
         p=Page('Financeiro','Compras de filamento são saída de caixa para estoque; consumo na fabricação compõe o resultado. Não são descontados juntos no resultado operacional.')
         p.button('+ Despesa',self.add_expense,True); p.button('+ Compra de filamento',self.add_purchase); p.button('Editar lançamento',self.edit_financial); p.button('Excluir lançamento',self.delete_financial)
-        p.button('Exportar',lambda:self.export_rows('Financeiro',[],{'Despesas':self.s.rows('SELECT * FROM expenses ORDER BY date'),'Compras':self.purchase_rows()}))
+        p.button('Exportar',lambda:self.export_rows('Financeiro',[],{'Despesas':self.filtered_expenses(),'Compras':self.filtered_purchases()}))
+        self.add_filters(p,'finance',dates=True,material=True,color=True,date_label='Data do lançamento')
+        self.finance_query=QLineEdit();self.finance_query.setPlaceholderText('Categoria, descrição ou compra');self.finance_query.returnPressed.connect(self.update_finance);p.toolbar.addWidget(self.finance_query)
+        note=QLabel('Material/cor filtra compras de filamento. Despesas gerais não têm cor e ficam fora desse recorte. Limpe os filtros para ver ambos.');note.setWordWrap(True);p.layout.addWidget(note)
         self.finance_tabs=QTabWidget(); p.layout.addWidget(self.finance_tabs)
         self.expenses_table=Table(); self.purchases_table=Table()
         self.finance_tabs.addTab(self.expenses_table,'Despesas'); self.finance_tabs.addTab(self.purchases_table,'Compras de filamento')
@@ -540,8 +557,8 @@ class MainWindow(ManagementMixin,QMainWindow):
 
     @guarded
     def update_finance(self):
-        self.expenses_table.fill(self.s.rows('SELECT * FROM expenses ORDER BY date DESC,id DESC'),[('id','ID'),('date','Data'),('category','Categoria'),('description','Descrição'),('amount_cents','Valor')])
-        self.purchases_table.fill(self.purchase_rows(),[('id','ID'),('date','Data'),('material','Material'),('color','Cor'),('grams','Peso comprado (g)'),('amount_cents','Valor'),('freight_cents','Frete')])
+        self.expenses_table.fill(self.filtered_expenses(),[('id','ID'),('date','Data'),('category','Categoria'),('description','Descrição'),('amount_cents','Valor')])
+        self.purchases_table.fill(self.filtered_purchases(),[('id','ID'),('date','Data'),('material','Material'),('color','Cor'),('grams','Peso comprado (g)'),('amount_cents','Valor'),('freight_cents','Frete')])
 
     @guarded
     def add_expense(self):
@@ -666,31 +683,29 @@ class MainWindow(ManagementMixin,QMainWindow):
 
     def build_settings(self):
         p=Page('Configurações e proteção dos dados','Parâmetros locais, backup consistente e histórico de operações. Este aplicativo usa apenas o banco novo do ERP 2.0.')
-        p.button('Editar parâmetros',self.edit_settings,True); p.button('Criar backup',self.backup); p.button('Restaurar backup',self.restore); p.button('Verificar integridade',self.integrity)
-        p.button('Histórico',self.audit);p.button('Aparência e acessibilidade',self.appearance_settings);p.button('Exportar diagnóstico',self.export_diagnostic)
+        p.button('Custos e taxas → Precificação',lambda:self.nav.setCurrentRow(3),True); p.button('Criar backup',self.backup); p.button('Restaurar backup',self.restore); p.button('Verificar integridade',self.integrity)
+        p.button('Formato dos SKUs',self.edit_sku_format);p.button('Histórico',self.audit);p.button('Aparência e acessibilidade',self.appearance_settings);p.button('Exportar diagnóstico',self.export_diagnostic)
         self.settings_browser=QTextBrowser(); p.layout.addWidget(self.settings_browser)
         return p,self.update_settings
 
     @guarded
     def update_settings(self):
-        labels={'filament_kg':'Filamento padrão R$/kg (sem cores)','energy_kwh':'Energia R$/kWh','power_w':'Potência W','machine_hour':'Máquina R$/h',
-                'fee_percent':'Taxa percentual %','fee_fixed':'Taxa fixa R$','pricing_mode':'Modo','profit_percent':'Margem / acréscimo %','sku_width':'Dígitos do próximo SKU'}
-        self.settings_browser.setHtml('<h2>Parâmetros de precificação</h2><table>'+''.join(f'<tr><td style="padding:10px">{text(labels.get(k,k))}</td><td>{text(v)}</td></tr>' for k,v in self.s.settings().items() if k in labels)+'</table>'+
-            '<h3>Taxas configuráveis</h3><p>Os valores iniciais de taxas são zero; revise as condições do seu canal. Não se assume regra atual da Shopee.</p>'+
-            f'<h3>Armazenamento</h3><p>{text(self.s.path)}</p><p>Backups automáticos antes de importações ficam na subpasta backups. Faça também cópias em outra mídia.</p>'+
-            '<p>O banco inicia vazio. Restauração aceita somente a identidade e a versão de esquema deste projeto. Antes de restaurar, o banco atual é preservado. O aplicativo bloqueia uma segunda instância no mesmo banco.</p>'+
-            '<h3>Instalação transparente</h3><p>Sem atualização automática, scripts remotos, ofuscação ou alterações na instalação anterior. A reescrita não garante ausência de ameaças. Testes funcionais não são análise antivírus. Consulte a documentação de dependências e segurança no projeto.</p>')
+        self.settings_browser.setHtml('<h2>Preferências e proteção dos dados</h2><p>Custos, taxas e margem têm um único editor em <b>Precificação → Custo e preço</b>. Material/cor e preço por kg ficam em <b>Materiais → Cores e preços/kg</b>.</p>'+
+            f'<h3>Armazenamento local</h3><p>{text(self.s.path)}</p><p>Backups automáticos ficam na subpasta backups. Faça também uma cópia em outra mídia.</p>'+
+            '<p>Restaurar um backup preserva primeiro o banco atual. O arquivo de origem não é alterado. A integridade e a identidade do banco são verificadas antes da conversão.</p>'+
+            '<h3>Leitura e navegação</h3><p>Aparência ajusta fonte, contraste, opacidade e largura do menu. F1 abre a ajuda da tela; Ctrl+F busca produtos e pedidos. O menu agrupa as ferramentas em oito áreas.</p>'+
+            '<h3>Diagnóstico e histórico</h3><p>O diagnóstico salva versões, contagens e integridade localmente, sem dados comerciais. A auditoria registra operações; nenhum arquivo é enviado automaticamente.</p>')
 
     @guarded
     def edit_settings(self):
         s=self.s.settings()
         labels={'filament_kg':'Filamento padrão R$/kg','energy_kwh':'Energia R$/kWh','power_w':'Potência da impressora (W)','machine_hour':'Uso da máquina R$/h',
-                'fee_percent':'Taxas percentuais %','fee_fixed':'Taxa fixa R$/unidade','profit_percent':'Margem ou acréscimo %','sku_width':'Dígitos do SKU numérico'}
+                'fee_percent':'Taxas percentuais %','fee_fixed':'Taxa fixa R$/unidade','profit_percent':'Margem ou acréscimo %'}
         fields=[(k,label,s[k]) for k,label in labels.items()]
         modes=[('Margem sobre venda','margem'),('Acréscimo sobre custo','acrescimo')]; modes.sort(key=lambda x:x[1]!=s['pricing_mode'])
         fields.append(('pricing_mode','Método',modes))
-        v=self.form('Parâmetros',fields,'Margem + taxas deve ser inferior a 100%. Taxa fixa é aplicada por unidade na sugestão; pedidos usam as taxas efetivas importadas.')
-        if v:self.erp.save_settings(v); self.refresh()
+        v=self.form('Custos atuais e taxas de precificação',fields,'Informe seus valores reais; os valores existentes são referências editáveis. Salvar registra a data da revisão e preserva custos históricos. Margem + taxas deve ser inferior a 100%. Taxa fixa é aplicada por unidade na sugestão; pedidos usam as taxas efetivas importadas.')
+        if v:v['sku_width']=s['sku_width'];self.erp.save_settings(v);self.refresh()
 
     @guarded
     def backup(self):

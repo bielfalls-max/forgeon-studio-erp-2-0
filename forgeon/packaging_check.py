@@ -18,7 +18,7 @@ def check(destination):
     QMessageBox.warning = lambda *args, **kwargs: errors.append(str(args[-1]))
     QMessageBox.critical = lambda *args, **kwargs: errors.append(str(args[-1]))
     from .version import VERSION
-    result = {'version':VERSION, 'ok': False, 'platform': platform.platform(), 'screens': 0, 'errors': errors}
+    result = {'version':VERSION, 'ok': False, 'platform': platform.platform(), 'screens': 0, 'groups':0, 'errors': errors}
     try:
         with tempfile.TemporaryDirectory(prefix='forgeon-check-') as folder:
             store = Store(Path(folder) / 'check.sqlite3')
@@ -34,6 +34,7 @@ def check(destination):
                     store.db.execute('DELETE FROM recipe_revisions WHERE product_id=?',(pid,))
                     store.db.execute('DELETE FROM products WHERE id=?', (pid,))
                 window = MainWindow(erp)
+                result['groups']=window.nav.groups.count();assert result['groups']==8
                 assert not window.windowIcon().isNull(), 'Ícone não incluído no pacote'
                 assert not window.backdrop.image.isNull(), 'Paisagem não incluída no pacote'
                 assert window.updates_page.notes.toPlainText(), 'Notas não incluídas no pacote'
@@ -56,6 +57,12 @@ def check(destination):
                 workshop.void_loss(erp,event,'Estorno sintético')
                 assert workshop.roll_balance(store,rid)==80
                 assert management.simulator(erp,pid)['scenario']['total_cents']>0
+                from .business.costs import material_costs,use_purchase
+                erp.purchase('01/11/2026',fid,'500','55','5')
+                cost=next(c for c in material_costs(erp) if c['id']==fid)
+                assert cost['purchase_kg_cents']==12000
+                use_purchase(erp,fid,cost['purchase_id'])
+                assert erp.cost(pid)['material_cents']==120
                 management.save_receipt(erp,'01/11/2026','10','REPASSE-SINTETICO')
                 assert len(management.receipt_rows(erp))==1
                 for index in range(window.stack.count()):

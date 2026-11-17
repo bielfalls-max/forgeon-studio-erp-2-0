@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QFormLayout,QLineEdit,QComboBox,QDialogButtonBox,
                               QLabel,QTableWidget,QTableWidgetItem,QAbstractItemView,QHeaderView,QPushButton,
-                              QWidget,QHBoxLayout,QTextBrowser,QCheckBox,QSpinBox,QMessageBox,QMenu,QFileDialog,QApplication,QScrollArea)
+                              QWidget,QHBoxLayout,QTextBrowser,QCheckBox,QSpinBox,QMessageBox,QMenu,QFileDialog,QApplication,QScrollArea,QLayout,QFrame)
 from PySide6.QtCore import Qt,QTimer
 from PySide6.QtGui import QColor
 from ..business.numbers import money
@@ -50,6 +50,7 @@ class Table(QTableWidget):
     def __init__(self):
         super().__init__()
         self.records=[]
+        self.setMinimumHeight(160)
         self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
@@ -89,7 +90,7 @@ class Table(QTableWidget):
                 if value is not None and key in ('weight','grams','unit_grams','hours','unit_hours'):
                     try:value=f'{Decimal(str(value)):,.3f}'.replace(',','X').replace('.',',').replace('X','.')
                     except InvalidOperation:pass
-                if key in ('date','start','end','cost_at','snapshot_at','recorded','created','due','added') and isinstance(value,str):
+                if key in ('date','start','end','cost_at','snapshot_at','recorded','created','due','added','purchase_date','reviewed') and isinstance(value,str):
                     try: value=datetime.strptime(value[:10],'%Y-%m-%d').strftime('%d/%m/%Y')+value[10:]
                     except ValueError: pass
                 item=SortItem(str(value))
@@ -182,10 +183,12 @@ class Table(QTableWidget):
 class Page(QWidget):
     def __init__(self,title,subtitle=''):
         super().__init__()
-        self.layout=QVBoxLayout(self); self.layout.setContentsMargins(26,24,26,22); self.layout.setSpacing(14)
+        outer=QVBoxLayout(self);outer.setContentsMargins(26,24,26,22);outer.setSpacing(14)
+        self.scroll_area=QScrollArea();self.scroll_area.setWidgetResizable(True);self.scroll_area.setFrameShape(QFrame.Shape.NoFrame);self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        content=QWidget();self.scroll_area.setWidget(content);self.layout=QVBoxLayout(content);self.layout.setContentsMargins(0,0,0,0);self.layout.setSpacing(14);self.layout.setSizeConstraint(QLayout.SizeConstraint.SetMinimumSize)
         self.page_title=title
         top=QHBoxLayout();heading=QLabel(title);heading.setObjectName('pageTitle');top.addWidget(heading,1)
-        self.help_button=QPushButton('ⓘ Como usar');self.help_button.setObjectName('helpButton');self.help_button.setToolTip('Ajuda desta aba · F1');self.help_button.clicked.connect(self.show_usage);top.addWidget(self.help_button);self.layout.addLayout(top)
+        self.help_button=QPushButton('ⓘ Como usar');self.help_button.setObjectName('helpButton');self.help_button.setToolTip('Ajuda desta aba · F1');self.help_button.clicked.connect(self.show_usage);top.addWidget(self.help_button);outer.addLayout(top);outer.addWidget(self.scroll_area,1)
         if subtitle:
             sub=QLabel(subtitle); sub.setWordWrap(True); sub.setObjectName('subtitle'); self.layout.addWidget(sub)
         self.toolbar=FlowLayout(); self.layout.addLayout(self.toolbar)
