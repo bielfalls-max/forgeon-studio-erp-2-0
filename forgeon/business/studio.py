@@ -13,8 +13,8 @@ def catalog_from_sales(erp):
             existing=s.one('SELECT id FROM products WHERE name=? AND model=?',(name,origin['listing']))
             pid=existing['id'] if existing else s.db.execute('INSERT INTO products(name,model,notes) VALUES(?,?,?)',(name,origin['listing'],'Identificado nas vendas. Vincule 3MF/G-code e revise custos antes de precificar.')).lastrowid
             count+=not bool(existing)
-            key=physical_key(origin['variation'],origin['listing'],draft=True) if origin['variation'].strip() else None
-            if key:s.db.execute('INSERT INTO product_identities VALUES(?,?) ON CONFLICT(identity_key) DO UPDATE SET product_id=excluded.product_id',(key_string(key),pid));s.db.execute('UPDATE products SET name=?,model=? WHERE id=?',(key[0].title(),key[1]+' cm',pid))
+            key=physical_key(origin['variation'],'',draft=True) if origin['variation'].strip() else None
+            if key:s.db.execute('INSERT INTO product_identities VALUES(?,?) ON CONFLICT(identity_key) DO UPDATE SET product_id=excluded.product_id',(key_string(key),pid));s.db.execute('UPDATE products SET name=?,model=? WHERE id=?',(('Amy Rose' if key[0]=='amy' else key[0].title()),key[1]+' cm',pid))
         s.db.execute('UPDATE origins SET product_id=? WHERE id=?',(pid,origin['id']))
         s.db.execute('UPDATE order_items SET product_id=? WHERE origin_id=? AND product_id IS NULL',(pid,origin['id']))
     if count:s.log('cadastros_das_vendas',{'produtos':count})

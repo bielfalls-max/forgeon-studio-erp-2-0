@@ -80,7 +80,7 @@ class StudioMixin:
         from ..business.unification import proposals,apply
         from PySide6.QtWidgets import QDialog,QVBoxLayout,QDialogButtonBox
         rows=proposals(self.erp)
-        if not rows:self.info('Nenhum grupo seguro repetido encontrado. Nomes desconhecidos ou tamanhos ambíguos precisam de revisão manual.');return
+        if not rows:self.info('O catálogo já foi normalizado automaticamente. Não há grupos repetidos compatíveis pendentes. Tamanhos/variantes desconhecidos precisam de revisão pelo cadastro.');return
         d=QDialog(self);d.setWindowTitle('Unificar produtos por nome e tamanho');d.resize(1050,600);layout=QVBoxLayout(d)
         note=QLabel('Padrão informado: personagens reconhecidos sem tamanho explícito usam 12 cm. Tamanhos explícitos (ex.: 16 cm) permanecem separados. Sonic, Super Sonic, Metal Sonic e Shadow são produtos distintos. Só grupos sem receitas/custos conflitantes serão unificados; origens e pedidos são preservados e haverá backup.');note.setWordWrap(True);layout.addWidget(note)
         table=Table();table.fill(rows,[('name','Boneco'),('size','Tamanho'),('count','Cadastros encontrados'),('target','Cadastro mantido'),('sources','Cadastros arquivados'),('status','Revisão')]);layout.addWidget(table)

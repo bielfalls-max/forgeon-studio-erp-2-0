@@ -176,14 +176,14 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
         self.dashboard.setText(f"<p><b>Resultado operacional</b><br>Vendas menos reembolsos, taxas, produção e despesas. Compras de filamento não são descontadas novamente.</p><p><b>Caixa estimado</b><br>Considera compras e datas dos pedidos. Não representa saldo bancário ou repasses conciliados.</p><p><b>Cobertura das fontes</b><br>Estatísticas por anúncio: {money(r['stats_cents'])}<br>Diferença para pedidos: {money(r['difference_cents'])}</p><p>Estatísticas são uma comparação separada. Elas nunca são somadas como novas vendas.</p>")
 
     def build_products(self):
-        p=Page('Produtos e receitas de impressão','Cadastre o produto físico uma vez. Gramas por cor, tempo e custo alimentam pedidos, relatórios e precificação.')
-        self.product_search=QLineEdit();self.product_search.setMinimumWidth(220);self.product_search.setPlaceholderText('Buscar produto, modelo ou SKU');self.product_search.textChanged.connect(lambda:self.update_products());p.toolbar.addWidget(self.product_search)
+        p=Page('Produtos','Cadastre o produto físico uma vez. Gramas por cor, tempo e custo alimentam pedidos, relatórios e precificação.')
+        self.product_search=QLineEdit();self.product_search.setMinimumWidth(220);self.product_search.setPlaceholderText('Buscar personagem ou tamanho');self.product_search.textChanged.connect(lambda:self.update_products());p.toolbar.addWidget(self.product_search)
         p.button('Cadastrar via 3MF / G-code',self.slicing,True);p.button('+ Cadastro manual',lambda:self.edit_product())
-        p.button('Editar',lambda:self.edit_product(self.products_table.selected()['id']));p.button('Unificar repetidos',self.unify_products);p.button('Histórico da receita',self.show_recipe_history);p.button('Arquivar / reativar',self.archive_product);p.button('Exportar XLSX',lambda:self.export_rows('Produtos',self.visible_products()))
+        p.button('Editar',lambda:self.edit_product(self.products_table.selected()['id']));p.button('Revisar conflitos',self.unify_products);p.button('Histórico da receita',self.show_recipe_history);p.button('Arquivar / reativar',self.archive_product);p.button('Exportar XLSX',lambda:self.export_rows('Produtos',self.visible_products()))
         self.add_filters(p,'products',material=True,color=True)
         self.show_archived=QCheckBox('Incluir arquivados');self.show_archived.stateChanged.connect(lambda:self.update_products());p.toolbar.addWidget(self.show_archived)
         stats=QHBoxLayout();self.product_metrics=[]
-        for title,caption in [('Produtos cadastrados','Produtos físicos ativos'),('Receitas completas','Peso, tempo e custo disponíveis'),('Origens vinculadas','Anúncios usando seus cadastros')]:
+        for title,caption in [('Produtos cadastrados','Produtos físicos ativos'),('Receitas completas','Peso, tempo e custo disponíveis'),('Revisões necessárias','Produtos com receita/custo pendente')]:
             card=MetricCard(title,caption);card.setMinimumHeight(108);stats.addWidget(card);self.product_metrics.append(card)
         p.layout.addLayout(stats)
         self.product_empty=GlassCard();label=QLabel('Comece pelo arquivo do fatiador');label.setObjectName('sectionTitle');self.product_empty.body.addWidget(label)
@@ -197,24 +197,32 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
         return p,self.update_products
 
     def product_rows(self):
+        from ..business.unification import proposals
+        conflicts={pid for group in proposals(self.erp) if not group['safe'] for pid in [group['target']]+group['sources']}
         result=[]
         for product in self.s.rows('SELECT * FROM products ORDER BY name,model'):
+            from ..business.unification import product_key,display_name
+            key=product_key(self.erp,product)
+            if key:product={**product,'name':display_name(key[0]),'model':key[1]+' cm'}
+            elif product['notes'].startswith('Identificado nas vendas.'):product={**product,'model':'Revisar tamanho'}
             pid=product['id']; c=self.erp.cost(pid)
             origins=self.s.rows('SELECT * FROM origins WHERE product_id=? AND active=1',(pid,))
             result.append({**product,'skus':', '.join(sorted({o['sku'] for o in origins if o['sku']})), 'origins_count':len(origins),
                            'colors':'; '.join(f"{x['material']} {x['color']}: {x['grams']} g" for x in c['colors']),
-                           'weight':c['grams'],'total_cents':c['total_cents'],'suggested_cents':c['suggested_cents'],'pending':', '.join(c['missing']) or 'Completo'})
+                           'weight':c['grams'],'total_cents':c['total_cents'],'suggested_cents':c['suggested_cents'],'pending':'Revisar conflito de receita/custo' if pid in conflicts else (', '.join(c['missing']) or 'Completo')})
         return result
 
     @guarded
     def update_products(self):
+        from ..business.unification import automatic_repair
+        automatic_repair(self.erp)
         q=self.product_search.text().casefold()
         rows=self.visible_products()
         all_rows=self.product_rows();active=[r for r in all_rows if not r['archived']]
-        for card,value in zip(self.product_metrics,[len(active),sum(not self.erp.cost(r['id'])['missing'] for r in active),sum(r['origins_count'] for r in active)]):card.set_value(str(value))
+        for card,value in zip(self.product_metrics,[len(active),sum(not self.erp.cost(r['id'])['missing'] for r in active),sum(bool(self.erp.cost(r['id'])['missing']) for r in active)]):card.set_value(str(value))
         self.product_empty.setVisible(not all_rows)
         self.products_table.blockSignals(True)
-        self.products_table.fill(rows,[('name','Produto'),('model','Modelo / tamanho'),('skus','SKUs'),('origins_count','Origens'),('colors','Cores / gramas por unidade'),('weight','Peso g'),('hours','Horas'),('total_cents','Custo'),('suggested_cents','Preço sugerido'),('pending','Pendências'),('archived','Arquivado')])
+        self.products_table.fill(rows,[('name','Produto'),('model','Modelo / tamanho'),('colors','Cores / gramas por unidade'),('weight','Peso g'),('hours','Horas'),('total_cents','Custo'),('suggested_cents','Preço sugerido'),('pending','Pendências'),('archived','Arquivado')])
         self.products_table.blockSignals(False)
         if rows:self.select_product_row(getattr(self,'last_product_id',rows[0]['id']))
         self.show_product_detail()

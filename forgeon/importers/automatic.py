@@ -128,5 +128,7 @@ def commit_plans(erp,plans):
             erp.s.db.execute('INSERT INTO import_history(source_hash,source_name,start,end,recorded,summary) VALUES(?,?,?,?,?,?)',(plan['source_hash'],plan['source_name'],plan['period']['start'],plan['period']['end'],datetime.now().isoformat(timespec='seconds'),json.dumps({'kind':plan['kind'],'records':len(plan.get('orders',plan.get('metrics',[])))},ensure_ascii=False)))
         from ..business.studio import catalog_from_sales
         catalog_from_sales(erp)
+    from ..business.unification import automatic_repair
+    automatic_repair(erp)
     erp.resolve_known_products()
     return backup

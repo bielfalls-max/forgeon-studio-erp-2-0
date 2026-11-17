@@ -43,13 +43,13 @@ def key_string(key):return json.dumps(key,ensure_ascii=False)
 
 def lookup(erp,listing,variation):
     if not variation.strip():return None
-    key=physical_key(variation,listing,draft=True)
+    key=physical_key(variation,'',draft=True)
     if not key:return None
     row=erp.s.one('SELECT p.* FROM product_identities i JOIN products p ON p.id=i.product_id WHERE i.identity_key=? AND p.archived=0',(key_string(key),))
-    if row and physical_key(row['name'],row['model'],draft=is_draft(row))==key:return row['id']
+    if row and product_key(erp,row)==key:return row['id']
     candidates=[]
     for product in erp.s.rows('SELECT * FROM products WHERE archived=0'):
-        k=physical_key(product['name'],product['model'],draft=is_draft(product))
+        k=product_key(erp,product)
         if k==key:candidates.append(product['id'])
     return candidates[0] if len(candidates)==1 else None
 
@@ -64,14 +64,14 @@ def fingerprint(s,p):
 def proposals(erp):
     groups={};result=[]
     for p in erp.s.rows('SELECT * FROM products WHERE archived=0 ORDER BY id'):
-        key=physical_key(p['name'],p['model'],draft=is_draft(p))
+        key=product_key(erp,p)
         if key:groups.setdefault(key,[]).append(p)
     for key,products in groups.items():
         if len(products)<2:continue
         known=[p for p in products if fingerprint(erp.s,p)[0]]
         signatures={fingerprint(erp.s,p)[1] for p in known}
         target=(known or products)[0]
-        result.append({'key':key_string(key),'name':key[0].title(),'size':key[1]+' cm','target':target['id'],'sources':[p['id'] for p in products if p['id']!=target['id']],
+        result.append({'key':key_string(key),'name':display_name(key[0]),'size':key[1]+' cm','target':target['id'],'sources':[p['id'] for p in products if p['id']!=target['id']],
             'count':len(products),'status':'Revisar receitas/custos diferentes' if len(signatures)>1 else 'Pode unificar','safe':len(signatures)<=1})
     return result
 
@@ -92,7 +92,38 @@ def apply(erp,rows):
                 s.db.execute('INSERT INTO product_merges VALUES(?,?,?,?)',(source,target,datetime.now().isoformat(timespec='seconds'),json.dumps({'identity':key})))
                 count+=1
             # Receita e revisões originais ficam preservadas; target é o cadastro com dados.
-            s.db.execute('UPDATE products SET name=?,model=? WHERE id=?',(key[0].title(),key[1]+' cm',target))
+            s.db.execute('UPDATE products SET name=?,model=? WHERE id=?',(display_name(key[0]),key[1]+' cm',target))
             s.db.execute('INSERT INTO product_identities VALUES(?,?) ON CONFLICT(identity_key) DO UPDATE SET product_id=excluded.product_id',(row['key'],target))
             s.log('unificar_produtos',row)
     return count
+
+
+def product_key(erp,product):
+    model=product['model']
+    from_sales=is_draft(product) or bool(erp.s.one('SELECT id FROM origins WHERE product_id=? AND listing=?',(product['id'],model)))
+    # Título do anúncio não é modelo físico, nem prova a medida de uma variação.
+    if from_sales and not re.fullmatch(r'\s*\d+(?:[.,]\d+)?\s*(?:cm|mm)\s*',norm(model)):model=''
+    return physical_key(product['name'],model,draft=from_sales)
+
+
+def automatic_repair(erp):
+    rows=proposals(erp)
+    count=apply(erp,rows)
+    # Normaliza também os grupos com um cadastro, sem alterar grupos conflitantes.
+    groups={}
+    for p in erp.s.rows('SELECT * FROM products WHERE archived=0'):
+        key=product_key(erp,p)
+        if key:groups.setdefault(key,[]).append(p)
+    changes=[(key,ps[0]) for key,ps in groups.items() if len(ps)==1 and (ps[0]['name']!=display_name(key[0]) or ps[0]['model']!=key[1]+' cm')]
+    if changes:
+        if not count:erp.s.backup()
+        with erp.s.transaction():
+            for key,p in changes:
+                erp.s.db.execute('UPDATE products SET name=?,model=? WHERE id=?',(display_name(key[0]),key[1]+' cm',p['id']))
+                erp.s.db.execute('INSERT INTO product_identities VALUES(?,?) ON CONFLICT(identity_key) DO UPDATE SET product_id=excluded.product_id',(key_string(key),p['id']))
+            erp.s.log('normalizar_catalogo_fisico',{'produtos':len(changes)})
+    if count:erp.resolve_known_products()
+    return count
+
+
+def display_name(name):return 'Amy Rose' if name=='amy' else name.title()

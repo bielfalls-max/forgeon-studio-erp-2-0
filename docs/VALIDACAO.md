@@ -105,3 +105,8 @@ A compilação Windows exige os testes nativos e as verificações de executáve
 ## HF09 — 2.0.10 — 17/11/2026
 
 141 testes locais, incluindo cinco cenários novos de identidade/tamanho, aliases explícitos e intervalos ambíguos, unificação de origens/itens sem mudar snapshots, separação 12/16 cm nas importações e bloqueio de receitas conflitantes. Testes públicos usam dados sintéticos. Verificações de pacote e instalação Windows são exigidas antes da publicação; evidências acompanham a versão. Validação manual dos grupos reais continua necessária na prévia.
+
+
+## HF10 — 2.0.11 — 17/11/2026
+
+146 testes locais, com cinco cenários adicionais: anúncios legados sem observação, reparo automático na reabertura, preservação de tamanhos explícitos, vendas de aliases em anúncios distintos consultando uma receita e tela Produtos com uma linha física sem colunas de anúncio/SKU. Os testes do pacote e instalação Windows são exigidos na publicação. Arquivos particulares não acompanham a distribuição.

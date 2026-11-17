@@ -14,6 +14,7 @@ FORGEON_STUDIO_ERP_2_0/
   docs/HF07_IMPORTACAO_AUTOMATICA.md
   docs/HF08_ESTUDIO.md
   docs/HF09_PRODUTOS.md
+  docs/HF10_CATALOGO_FISICO.md
   docs/HOTFIXES.md
   docs/INSTALADOR_WINDOWS.md
   docs/REGRAS_FINANCEIRAS.md
@@ -24,6 +25,7 @@ FORGEON_STUDIO_ERP_2_0/
   docs/resultado_hf07_pytest.txt
   docs/resultado_hf08_pytest.txt
   docs/resultado_hf09_pytest.txt
+  docs/resultado_hf10_pytest.txt
   docs/resultado_pytest.txt
   forgeon/__init__.py
   forgeon/__main__.py
@@ -108,6 +110,7 @@ FORGEON_STUDIO_ERP_2_0/
   tests/test_hf07.py
   tests/test_hf08.py
   tests/test_hf09.py
+  tests/test_hf10.py
   tests/test_hotfix.py
   tests/test_orders.py
   tests/test_packaging.py

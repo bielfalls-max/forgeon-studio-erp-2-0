@@ -1,5 +1,15 @@
 # Notas de atualização
 
+## 2.0.11 — HF10 · Catálogo físico — 17/11/2026
+
+- Corrige a dependência de ação manual da unificação anterior. Grupos compatíveis são reparados ao abrir o ERP, abrir Produtos e após importar pedidos, com backup e histórico preservados.
+- Títulos de anúncio legados são reconhecidos pelo vínculo de origem, mesmo sem a observação automática antiga. Não definem a identidade ou o tamanho do boneco.
+- Amy/Amy Rose usa um único cadastro Amy Rose; repetições de Metal Sonic e aliases conhecidos são normalizadas.
+- Produtos mostra personagem, tamanho, consumo, tempo e custo; remove colunas de anúncios, SKUs e origens dessa tela. Esses vínculos permanecem internos.
+- Medidas explícitas de 12/16 cm são distintas. Modelos com receitas/custos diferentes permanecem para revisão, sem sobrescrever dados.
+- Novas vendas reutilizam o cadastro físico para consultar consumo. Campos desconhecidos não recebem receitas fictícias.
+
+
 ## 2.0.10 — HF09 · Produtos unificados — 17/11/2026
 
 - Produtos físicos passam a ser identificados por nome/variante e tamanho, independentemente do anúncio de origem.

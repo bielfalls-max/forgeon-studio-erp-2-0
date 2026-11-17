@@ -13,6 +13,8 @@ class ERP:
             with self.s.transaction():
                 catalog_from_sales(self)
                 self.s.db.execute("INSERT INTO preferences VALUES('studio_backfill','true')")
+        from .unification import automatic_repair
+        automatic_repair(self)
 
     def product(self, pid):
         p = self.s.one('SELECT * FROM products WHERE id=?', (pid,))
