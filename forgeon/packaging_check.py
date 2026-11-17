@@ -70,6 +70,11 @@ def check(destination):
                 plan=inspect_file(sample);commit_plans(erp,[plan]);commit_plans(erp,[plan])
                 from .reports.finance import report
                 checked=report(erp,'01/01/2026','31/01/2026');assert checked['shop_totals'][0]['revenue_cents']==10000 and checked['gross_cents']==0
+                from .business.unification import proposals,apply
+                for listing in ('Origem sintética A','Origem sintética B'):
+                    erp.save_product({'name':'Super Sonic','model':listing,'notes':'Identificado nas vendas. Receita pendente.'})
+                assert apply(erp,proposals(erp))==1
+                assert not proposals(erp)
                 management.save_receipt(erp,'01/11/2026','10','REPASSE-SINTETICO')
                 assert len(management.receipt_rows(erp))==1
                 for index in range(window.stack.count()):

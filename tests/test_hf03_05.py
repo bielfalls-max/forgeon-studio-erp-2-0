@@ -213,7 +213,7 @@ def test_v2_migration_and_restore_preserve_source_and_current_new_tables(erp,tmp
         old.executescript(Path('forgeon/db/schema.sql').read_text());old.executemany('INSERT INTO settings VALUES(?,?)',DEFAULTS.items());old.commit();Store.migrate(old,2)
         old.execute("INSERT INTO products(name,weight,hours) VALUES('Legado sintético','10','1')");old.commit()
     original=source.read_bytes();erp.s.restore(source)
-    assert source.read_bytes()==original and erp.s.db.execute('PRAGMA user_version').fetchone()[0]==5
+    assert source.read_bytes()==original and erp.s.db.execute('PRAGMA user_version').fetchone()[0]==6
     assert erp.s.one('SELECT name FROM products')['name']=='Legado sintético'
     org.set_preference(erp.s,'appearance',{'font':14});backup=erp.s.backup();erp.s.restore(backup)
     assert org.preference(erp.s,'appearance')['font']==14

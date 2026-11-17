@@ -100,3 +100,8 @@ A compilação Windows exige os testes nativos e as verificações de executáve
 ## HF08 — 2.0.9 — 17/11/2026
 
 136 testes locais, incluindo cinco novos cenários de produtos automáticos sem receita fictícia e sem duplicação, compras e consumo sem descontar duas vezes, custo congelado preservado, sugestão por pedidos abertos, precisão de frações de centavo e ferramenta/despesa com frete no mês. Capturas Qt offscreen em janela 1100×700 foram inspecionadas. A validação Windows e as verificações de instalação são exigidas pelo fluxo de publicação; evidências acompanham a versão. Saldos/sugestões são estimativas que dependem de histórico/receitas completos e conferência física.
+
+
+## HF09 — 2.0.10 — 17/11/2026
+
+141 testes locais, incluindo cinco cenários novos de identidade/tamanho, aliases explícitos e intervalos ambíguos, unificação de origens/itens sem mudar snapshots, separação 12/16 cm nas importações e bloqueio de receitas conflitantes. Testes públicos usam dados sintéticos. Verificações de pacote e instalação Windows são exigidas antes da publicação; evidências acompanham a versão. Validação manual dos grupos reais continua necessária na prévia.

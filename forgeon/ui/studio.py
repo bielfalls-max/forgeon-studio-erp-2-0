@@ -74,3 +74,16 @@ class StudioMixin:
         for row in r['expenses']+r['purchases']+r['supply_purchases']:
             month=row['date'][:7];values[month]=values.get(month,0)+row['amount_cents']+row.get('freight_cents',0)
         return [{'month':key,'amount_cents':value} for key,value in sorted(values.items())]
+
+    @ui_action
+    def unify_products(self):
+        from ..business.unification import proposals,apply
+        from PySide6.QtWidgets import QDialog,QVBoxLayout,QDialogButtonBox
+        rows=proposals(self.erp)
+        if not rows:self.info('Nenhum grupo seguro repetido encontrado. Nomes desconhecidos ou tamanhos ambíguos precisam de revisão manual.');return
+        d=QDialog(self);d.setWindowTitle('Unificar produtos por nome e tamanho');d.resize(1050,600);layout=QVBoxLayout(d)
+        note=QLabel('Padrão informado: personagens reconhecidos sem tamanho explícito usam 12 cm. Tamanhos explícitos (ex.: 16 cm) permanecem separados. Sonic, Super Sonic, Metal Sonic e Shadow são produtos distintos. Só grupos sem receitas/custos conflitantes serão unificados; origens e pedidos são preservados e haverá backup.');note.setWordWrap(True);layout.addWidget(note)
+        table=Table();table.fill(rows,[('name','Boneco'),('size','Tamanho'),('count','Cadastros encontrados'),('target','Cadastro mantido'),('sources','Cadastros arquivados'),('status','Revisão')]);layout.addWidget(table)
+        buttons=QDialogButtonBox(QDialogButtonBox.StandardButton.Ok|QDialogButtonBox.StandardButton.Cancel);buttons.button(QDialogButtonBox.StandardButton.Ok).setText('Unificar grupos compatíveis');buttons.button(QDialogButtonBox.StandardButton.Ok).setEnabled(any(r['safe'] for r in rows));buttons.accepted.connect(d.accept);buttons.rejected.connect(d.reject);layout.addWidget(buttons)
+        if d.exec()==QDialog.DialogCode.Accepted:
+            count=apply(self.erp,rows);self.refresh();self.info(f'{count} cadastros repetidos arquivados e vinculados ao produto físico. Receitas conflitantes ficaram para revisão. Pedidos e custos históricos preservados.')

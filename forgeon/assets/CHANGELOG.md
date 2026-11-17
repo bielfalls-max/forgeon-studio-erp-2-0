@@ -1,5 +1,15 @@
 # Notas de atualização
 
+## 2.0.10 — HF09 · Produtos unificados — 17/11/2026
+
+- Produtos físicos passam a ser identificados por nome/variante e tamanho, independentemente do anúncio de origem.
+- Para os personagens reconhecidos, tamanho ausente usa o padrão informado de 12 cm. Medidas explícitas, incluindo 16 cm, permanecem separadas.
+- Normaliza nomes repetidos e variações de escrita conhecidas, sem fundir Sonic, Super Sonic, Metal Sonic, Shadow ou outros personagens. Cores/variantes desconhecidas e medidas ambíguas não são presumidas iguais.
+- Botão Unificar repetidos apresenta prévia. Apenas grupos sem receitas/custos conflitantes são aplicados, após confirmação e backup.
+- Anúncios e pedidos são religados ao produto mantido; cadastros antigos são arquivados, sem excluir receitas, revisões, SKUs originais ou custos congelados.
+- Novas importações reutilizam a identidade física reconhecida. Esquema 6 com migração protegida.
+
+
 ## 2.0.9 — HF08 · Gestão do estúdio — 17/11/2026
 
 - Produtos das vendas são cadastrados automaticamente com receita pendente; a importação não inventa gramas ou tempo. Banco existente recebe os cadastros faltantes ao abrir.

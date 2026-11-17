@@ -117,7 +117,7 @@ def test_schema_three_migration_and_restore_preserve_source(erp,tmp_path):
     with closing(sqlite3.connect(path)) as db:
         db.executescript(Path('forgeon/db/schema.sql').read_text());db.executemany('INSERT INTO settings VALUES(?,?)',DEFAULTS.items());db.commit();Store.migrate(db,3);db.execute("INSERT INTO products(name) VALUES('Produto legado sintético')");db.commit()
     original=path.read_bytes();erp.s.restore(path);assert path.read_bytes()==original
-    assert erp.s.db.execute('PRAGMA user_version').fetchone()[0]==5 and erp.s.one('SELECT name FROM products')['name']=='Produto legado sintético'
+    assert erp.s.db.execute('PRAGMA user_version').fetchone()[0]==6 and erp.s.one('SELECT name FROM products')['name']=='Produto legado sintético'
 
 
 def test_ui_automatic_import_does_not_ask_sheet_or_mapping(app,erp,tmp_path,monkeypatch):

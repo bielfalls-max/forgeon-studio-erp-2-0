@@ -8,7 +8,7 @@ def record_revision(erp,pid,reason):
 
 
 def revisions(erp,pid):
-    rows=erp.s.rows('SELECT * FROM recipe_revisions WHERE product_id=? ORDER BY id DESC',(pid,))
+    rows=erp.s.rows('SELECT * FROM recipe_revisions WHERE product_id=? OR product_id IN(SELECT source_id FROM product_merges WHERE target_id=?) ORDER BY id DESC',(pid,pid))
     for r in rows:
         data=json.loads(r['detail']);c=data['cost'];r.update(reason=data['reason'],grams=c['grams'],hours=c['hours'],total_cents=c['total_cents'],colors='; '.join(x['color']+': '+x['grams']+' g' for x in c['colors']))
     return rows

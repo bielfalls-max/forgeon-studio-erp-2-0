@@ -179,7 +179,7 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
         p=Page('Produtos e receitas de impressão','Cadastre o produto físico uma vez. Gramas por cor, tempo e custo alimentam pedidos, relatórios e precificação.')
         self.product_search=QLineEdit();self.product_search.setMinimumWidth(220);self.product_search.setPlaceholderText('Buscar produto, modelo ou SKU');self.product_search.textChanged.connect(lambda:self.update_products());p.toolbar.addWidget(self.product_search)
         p.button('Cadastrar via 3MF / G-code',self.slicing,True);p.button('+ Cadastro manual',lambda:self.edit_product())
-        p.button('Editar',lambda:self.edit_product(self.products_table.selected()['id']));p.button('Histórico da receita',self.show_recipe_history);p.button('Arquivar / reativar',self.archive_product);p.button('Exportar XLSX',lambda:self.export_rows('Produtos',self.visible_products()))
+        p.button('Editar',lambda:self.edit_product(self.products_table.selected()['id']));p.button('Unificar repetidos',self.unify_products);p.button('Histórico da receita',self.show_recipe_history);p.button('Arquivar / reativar',self.archive_product);p.button('Exportar XLSX',lambda:self.export_rows('Produtos',self.visible_products()))
         self.add_filters(p,'products',material=True,color=True)
         self.show_archived=QCheckBox('Incluir arquivados');self.show_archived.stateChanged.connect(lambda:self.update_products());p.toolbar.addWidget(self.show_archived)
         stats=QHBoxLayout();self.product_metrics=[]

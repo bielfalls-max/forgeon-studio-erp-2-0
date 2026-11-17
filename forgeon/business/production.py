@@ -18,6 +18,9 @@ def identity(value):
 def match_product(erp,listing,variation):
     # A marketplace listing title may contain a different character from its variation.
     # Never use the parent SKU, a substring or a fuzzy name to hide that difference.
+    from .unification import lookup
+    found=lookup(erp,listing,variation)
+    if found:return found
     key=identity(variation or listing)
     candidates=[]
     products=erp.s.rows('SELECT * FROM products WHERE archived=0')

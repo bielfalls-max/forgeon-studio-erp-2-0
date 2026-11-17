@@ -48,6 +48,7 @@ class ERP:
 
     def archive(self, pid):
         p = self.product(pid)
+        if p['archived'] and self.s.one('SELECT source_id FROM product_merges WHERE source_id=?',(pid,)):raise ValueError('Este cadastro foi unificado. Use o produto mantido; restaure o backup para desfazer a operação completa.')
         with self.s.transaction():
             self.s.db.execute('UPDATE products SET archived=? WHERE id=?', (1 - p['archived'], pid))
             self.s.log('produto_arquivo', {'id': pid, 'arquivado': not p['archived']})
