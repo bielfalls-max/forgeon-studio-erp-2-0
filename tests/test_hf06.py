@@ -24,14 +24,14 @@ def prepare_two_products(erp,product):
 
 
 def test_eight_groups_route_subtabs_and_keep_last_tab(window):
-    assert window.nav.groups.count()==8 and sorted(i for _,routes in GROUPS for i in routes)==list(range(16))
+    assert window.nav.groups.count()==7 and sorted(i for _,routes in GROUPS for i in routes)==list(range(16))
     window.nav.groups.setCurrentRow(2);assert window.stack.currentIndex()==3
     window.nav.tabs.setCurrentIndex(1);assert window.stack.currentIndex()==14
     window.nav.groups.setCurrentRow(4);assert window.stack.currentIndex()==5
     window.nav.groups.setCurrentRow(2);assert window.stack.currentIndex()==14
-    window.nav.setCurrentRow(15);assert window.nav.groups.currentRow()==6 and window.nav.tabs.currentIndex()==1
-    window.set_sidebar_compact(True,persist=False);assert window.nav.groups.item(6).text()=='Finanças'
-    window.set_sidebar_compact(False,persist=False);assert window.nav.groups.item(6).text()=='Financeiro'
+    window.nav.setCurrentRow(15);assert window.nav.groups.currentRow()==5 and window.nav.tabs.currentIndex()==2
+    window.set_sidebar_compact(True,persist=False);assert window.nav.groups.item(5).text()=='Finanças'
+    window.set_sidebar_compact(False,persist=False);assert window.nav.groups.item(5).text()=='Financeiro'
 
 
 def test_date_filter_custom_range_and_clear(erp,app):
@@ -58,14 +58,9 @@ def test_finance_date_material_and_category_filters(window,erp):
     f.clear();window.finance_query.setText('Aluguel');window.update_finance();assert len(window.expenses_table.records)==1 and not window.purchases_table.records
 
 
-def test_production_and_losses_use_all_filters(window,erp,product):
-    fid,other,fid2=prepare_two_products(erp,product);workshop.sync_jobs(erp)
-    with erp.s.transaction():erp.s.db.execute("UPDATE production_jobs SET created='2026-11-06T12:00:00'")
-    jid=next(j['id'] for j in workshop.jobs(erp) if j['product_id']==product);workshop.record_loss(erp,fid,'10','0','Falha','06/11/2026',jid,True);workshop.record_loss(erp,fid2,'10','0','Outra falha','06/10/2026',already_deducted=True)
-    window.nav.setCurrentRow(12);f=window.production_filters;f.start.setText('01/11/2026');f.end.setText('30/11/2026');f.fields['order'].setText('NOV');f.fields['color'].setText('Preto');window.refresh_production()
-    assert len(window.jobs_table.records)==1 and len(window.losses_table.records)==1
-    f.fields['color'].setText('Azul');window.refresh_production();assert not window.jobs_table.records and not window.losses_table.records
-    window.production_tabs.setCurrentIndex(2);assert not window.production_reverse_button.isHidden() and window.production_stage_button.isHidden()
+def test_production_removed_from_navigation(window):
+    assert all(title!='Produção' for title,_ in GROUPS)
+    window.nav.setCurrentRow(12);assert window.stack.widget(12).page_title=='Materiais e compras'
 
 
 def test_stock_dates_filter_movements_not_current_balance(window,erp):

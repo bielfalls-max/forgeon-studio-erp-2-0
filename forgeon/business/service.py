@@ -8,11 +8,18 @@ from .pricing import calculate
 class ERP:
     def __init__(self, store):
         self.s = store
+        if not self.s.one("SELECT key FROM preferences WHERE key='studio_backfill'"):
+            from .studio import catalog_from_sales
+            with self.s.transaction():
+                catalog_from_sales(self)
+                self.s.db.execute("INSERT INTO preferences VALUES('studio_backfill','true')")
 
     def product(self, pid):
         p = self.s.one('SELECT * FROM products WHERE id=?', (pid,))
         if not p:
             raise ValueError('Produto não encontrado.')
+        from .studio import product_extra
+        p['_base_other_cents']=p['other_cents'];p['other_cents']+=product_extra(self.s,pid)
         return p
 
     def colors(self, pid):

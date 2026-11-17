@@ -34,7 +34,7 @@ def check(destination):
                     store.db.execute('DELETE FROM recipe_revisions WHERE product_id=?',(pid,))
                     store.db.execute('DELETE FROM products WHERE id=?', (pid,))
                 window = MainWindow(erp)
-                result['groups']=window.nav.groups.count();assert result['groups']==8
+                result['groups']=window.nav.groups.count();assert result['groups']==7
                 assert not window.windowIcon().isNull(), 'Ícone não incluído no pacote'
                 assert not window.backdrop.image.isNull(), 'Paisagem não incluída no pacote'
                 assert window.updates_page.notes.toPlainText(), 'Notas não incluídas no pacote'

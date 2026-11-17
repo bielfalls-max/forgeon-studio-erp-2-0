@@ -1,5 +1,18 @@
 # Notas de atualização
 
+## 2.0.9 — HF08 · Gestão do estúdio — 17/11/2026
+
+- Produtos das vendas são cadastrados automaticamente com receita pendente; a importação não inventa gramas ou tempo. Banco existente recebe os cadastros faltantes ao abrir.
+- Produção sai do menu; registros antigos são preservados. Sete áreas, Vendas sempre abre em Pedidos e Financeiro abre nos gráficos.
+- Materiais recebe compras de caixas, bolha, cola e consumíveis com data, quantidade, valor e frete. Ferramentas/utensílios duráveis usam despesas.
+- Vínculo de quantidade por produto soma insumos ao custo unitário; compras afetam caixa no mês, sem descontar novamente a compra no resultado operacional.
+- Sugestões de compra estimadas para filamentos e insumos conforme pedidos abertos e dados cadastrados. Saldos estimados exigem histórico completo e conferência física.
+- Financeiro com gráficos de vendas, custos, produtos e compras/despesas; cada gráfico tem filtro próprio. Início fica no resumo e pendências rápidas.
+- Precificação com instruções em três passos e teste do preço de venda, exibindo custo, taxas, sobra e margem sem fazer contas manualmente.
+- Ajustes com cartões de custos, proteção, aparência e suporte.
+- Esquema 5 com backup de migração; custos históricos congelados são preservados.
+
+
 ## 2.0.8 — HF07 · Importação automática — 17/11/2026
 
 - Exportação XLSX preserva campos pendentes como Pendente, sem falhar nem converter ausência de custo em zero.

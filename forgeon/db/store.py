@@ -9,7 +9,7 @@ import tempfile
 
 APP_ID = 1179797298
 PROJECT = 'forgeon-studio-erp-2-new'
-LATEST_SCHEMA = 4
+LATEST_SCHEMA = 5
 DEFAULTS = {'filament_kg': '90', 'energy_kwh': '1', 'power_w': '150', 'machine_hour': '1',
             'fee_percent': '0', 'fee_fixed': '0', 'pricing_mode': 'margem', 'profit_percent': '30', 'sku_width': '5'}
 
@@ -45,7 +45,7 @@ class Store:
 
     @staticmethod
     def validate(connection):
-        if connection.execute('PRAGMA application_id').fetchone()[0] != APP_ID or connection.execute('PRAGMA user_version').fetchone()[0] not in (1,2,3,4):
+        if connection.execute('PRAGMA application_id').fetchone()[0] != APP_ID or connection.execute('PRAGMA user_version').fetchone()[0] not in (1,2,3,4,5):
             raise ValueError('Banco incompatível com FORGEON ERP 2.0 (projeto novo).')
         if connection.execute("SELECT value FROM meta WHERE key='project'").fetchone()[0] != PROJECT:
             raise ValueError('Identidade do banco incompatível.')

@@ -106,6 +106,9 @@ def report(erp, start, end, product_id=None, status='', filters=None):
     purchases = s.rows('SELECT b.*,f.material,f.color FROM purchases b JOIN filaments f ON f.id=b.filament_id WHERE date BETWEEN ? AND ? ORDER BY date',(start,end))
     expense_total = sum(e['amount_cents'] for e in expenses)
     purchase_total = sum(p['amount_cents']+p['freight_cents'] for p in purchases)
+    supply_purchases=s.rows('SELECT p.*,s.name,s.category FROM supply_purchases p JOIN supplies s ON s.id=p.supply_id WHERE date BETWEEN ? AND ?',(start,end))
+    supplies_total=sum(p['amount_cents']+p['freight_cents'] for p in supply_purchases)
+    purchase_total+=supplies_total
     stats = s.rows('SELECT * FROM stats WHERE start<=? AND end>=? ORDER BY start,listing',(end,start))
     full_stats = [r for r in stats if r['start']>=start and r['end']<=end]
     stat_total = sum(r['revenue_cents'] for r in full_stats)
@@ -131,7 +134,7 @@ def report(erp, start, end, product_id=None, status='', filters=None):
     refunds_pending=any(o['refund_cents']==0 and (status_kind(o['status'])=='devolucao' or json.loads(o.get('financial_detail') or '{}').get('returned_qty') or json.loads(o.get('financial_detail') or '{}').get('return_status')) for o in selected if status_kind(o['status'])!='cancelado')
     result_pending=production_pending or fees_pending or refunds_pending
     after_production=rounded(gross-fees-refunds-production-loss_total) if selected and not result_pending else None
-    return {'result_pending':bool(result_pending),'production_pending':production_pending,'after_production_cents':after_production,'shop_comparison':shop_rows,'shop_totals':totals(shop_rows),'start':start,'end':end,'partial':bool(partial),'orders_count':len(selected),'pending_items':pending,
+    return {'supply_purchases':supply_purchases,'supplies_cents':supplies_total,'result_pending':bool(result_pending),'production_pending':production_pending,'after_production_cents':after_production,'shop_comparison':shop_rows,'shop_totals':totals(shop_rows),'start':start,'end':end,'partial':bool(partial),'orders_count':len(selected),'pending_items':pending,
             'gross_cents':rounded(gross),'fees_cents':rounded(fees),'refunds_cents':rounded(refunds),
             'production_cents':production,'expenses_cents':expense_total,'purchases_cents':purchase_total,
             'operating_cents':rounded(gross-fees-refunds-production-expense_total-loss_total),
@@ -149,7 +152,7 @@ def report(erp, start, end, product_id=None, status='', filters=None):
 
 def monthly(erp):
     from calendar import monthrange
-    months = {r['month'] for r in erp.s.rows("SELECT substr(date,1,7) month FROM orders UNION SELECT substr(date,1,7) FROM expenses UNION SELECT substr(date,1,7) FROM purchases UNION SELECT substr(start,1,7) FROM stats UNION SELECT substr(date,1,7) FROM production_events UNION SELECT substr(date,1,7) FROM settlements UNION SELECT substr(start,1,7) FROM shop_metrics WHERE grain!='period'")}
+    months = {r['month'] for r in erp.s.rows("SELECT substr(date,1,7) month FROM orders UNION SELECT substr(date,1,7) FROM expenses UNION SELECT substr(date,1,7) FROM purchases UNION SELECT substr(start,1,7) FROM stats UNION SELECT substr(date,1,7) FROM production_events UNION SELECT substr(date,1,7) FROM settlements UNION SELECT substr(date,1,7) FROM supply_purchases UNION SELECT substr(start,1,7) FROM shop_metrics WHERE grain!='period'")}
     result = []
     for month in sorted(months):
         y,m = map(int,month.split('-'))

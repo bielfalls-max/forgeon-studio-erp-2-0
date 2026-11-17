@@ -2,6 +2,7 @@
 from PySide6.QtWidgets import QDialog,QVBoxLayout,QTextBrowser,QPushButton
 
 GUIDES={
+'Materiais e compras':('Compras e consumo por produto',['Cadastre a compra com data, quantidade, valor e frete.','Vincule o consumo por produto: 1 caixa, metros de bolha, gramas de cola.','Confira a sugestão de compra para pedidos abertos e revise os saldos físicos.'],'Saldo e necessidade são estimativas por receita e vendas cadastradas. Compras afetam caixa no mês; consumo afeta o custo dos produtos. Não duplique o mesmo insumo em Outros ou Embalagem. Ferramentas duráveis entram como despesa.'),
 'Visão geral':('Ler o painel mensal',['Escolha o mês e clique Atualizar painel.','Confira receitas, custos conhecidos e unidades sem receita.','Use os atalhos para cadastrar, importar ou corrigir pendências.'],'Filamento e horas são estimados pela receita × quantidade. A Enviar é previsão; não comprova impressão. Caixa estimado não é saldo bancário.'),
 'Produtos':('Cadastrar um produto físico',['Use Cadastrar via 3MF / G-code ou Cadastro manual.','Selecione as placas do mesmo produto e quantos produtos COMPLETOS elas rendem.','Revise material, cor, preço por kg e embalagem; salve e confira a precificação.'],'Material/cor filtram o cadastro e a exportação. Peças na placa não são unidades vendidas. SKU e anúncio não definem sozinhos o produto. Arquivar preserva pedidos.'),
 'Custos e cores':('Manter materiais e referências',['Cadastre ou edite material, cor e preço por kg.','Defina gramas de cada cor por unidade; zero remove a cor.','Copie receitas entre produtos se necessário e confira o destino.'],'Compare a referência editável com o preço da última compra por kg, incluindo frete. Usar preço da última compra exige confirmação. Preços alteram o custo atual do catálogo, não os custos já congelados nas vendas. Compra de filamento é registrada em Financeiro.'),
@@ -49,7 +50,7 @@ def help_text(title):
     key=next((key for key in GUIDES if key.casefold() in title.casefold()),None)
     if key is None:return '# Como usar\n\nSelecione um registro e confira os campos antes de salvar. Dados incompletos são sinalizados; use F1 na aba principal para instruções.'
     heading,steps,note=GUIDES[key]
-    note+=' O menu lateral agora tem oito áreas: Início, Produtos, Precificação, Materiais, Vendas, Produção, Financeiro e Ajustes. Use as subabas no topo; Custos e cores/Estoque ficam em Materiais, Importações em Vendas, Repasses/Relatórios em Financeiro e Atualizações em Ajustes.'
+    note+=' O menu lateral agora tem sete áreas: Início, Produtos, Precificação, Materiais, Vendas, Financeiro e Ajustes. Use as subabas no topo; Custos e cores/Estoque ficam em Materiais, Importações em Vendas, Repasses/Relatórios em Financeiro e Atualizações em Ajustes.'
     return '# '+heading+'\n\n'+'\n'.join(f'{i}. {step}' for i,step in enumerate(steps,1))+'\n\n## Como interpretar\n\n'+note+'\n\n**Atalhos:** F1 abre ajuda; Ctrl+F busca global; Ctrl+N cadastra produto; Ctrl+I importa pedidos.\n\nTabelas: clique no cabeçalho para ordenar, arraste colunas e use botão direito para ocultar, copiar ou exportar.'
 
 

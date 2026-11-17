@@ -95,3 +95,8 @@ Não se presume que tarifas de energia ou taxas comerciais estejam atualizadas s
 Os dois arquivos fornecidos foram lidos localmente e verificados em banco temporário descartável, inclusive reimportação invertida. Totais e contagens de outubro conferiram entre as bases correspondentes; informações e arquivos particulares não foram incluídos nos testes públicos, código ou instalador. Capturas Qt offscreen com dados sintéticos foram inspecionadas. O teste do pacote também lê um resumo sintético e reimporta, verificando que não cria vendas nem duplica o total.
 
 A compilação Windows exige os testes nativos e as verificações de executável/instalação/atualização aprovadas; evidências acompanham a versão. Validação manual no Windows 10/11 e com arquivos de outros formatos permanece necessária. Tarifas/custos e receitas de produção precisam ser informados pelo usuário.
+
+
+## HF08 — 2.0.9 — 17/11/2026
+
+136 testes locais, incluindo cinco novos cenários de produtos automáticos sem receita fictícia e sem duplicação, compras e consumo sem descontar duas vezes, custo congelado preservado, sugestão por pedidos abertos, precisão de frações de centavo e ferramenta/despesa com frete no mês. Capturas Qt offscreen em janela 1100×700 foram inspecionadas. A validação Windows e as verificações de instalação são exigidas pelo fluxo de publicação; evidências acompanham a versão. Saldos/sugestões são estimativas que dependem de histórico/receitas completos e conferência física.

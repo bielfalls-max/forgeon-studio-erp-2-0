@@ -54,7 +54,7 @@ class SlicingProductDialog(QDialog):
     def target_changed(self):
         pid=self.target.currentData()
         if pid:
-            p=self.erp.product(pid);self.name.setText(p['name']);self.model.setText(p['model']);self.packaging.setText(str(Decimal(p['packaging_cents'])/100));self.other.setText(str(Decimal(p['other_cents'])/100))
+            p=self.erp.product(pid);self.name.setText(p['name']);self.model.setText(p['model']);self.packaging.setText(str(Decimal(p['packaging_cents'])/100));self.other.setText(str(Decimal(p.get('_base_other_cents',p['other_cents']))/100))
 
     def recalculate(self,*args):
         selected=[row for row in range(self.plate_table.rowCount()) if self.plate_table.item(row,0).checkState()==Qt.CheckState.Checked]

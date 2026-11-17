@@ -2,8 +2,8 @@
 from PySide6.QtCore import Signal,Qt
 from PySide6.QtWidgets import QWidget,QVBoxLayout,QListWidget,QListWidgetItem,QTabBar
 
-GROUPS=[('Início',[0,11]),('Produtos',[1,4]),('Precificação',[3,14]),('Materiais',[2,13]),('Vendas',[5,6]),('Produção',[12]),('Financeiro',[7,15,8]),('Ajustes',[9,10])]
-SUBTITLES={0:'Painel',11:'Pendências',1:'Cadastro',4:'Anúncios e SKUs',3:'Custo e preço',14:'Simular cenário',2:'Cores e preços/kg',13:'Estoque',5:'Pedidos',6:'Importar',12:'Lotes e perdas',7:'Lançamentos',15:'Repasses',8:'Relatórios',9:'Preferências e backup',10:'Atualizações'}
+GROUPS=[('Início',[0,11]),('Produtos',[1,4]),('Precificação',[3,14]),('Materiais',[12,2,13]),('Vendas',[5,6]),('Financeiro',[8,7,15]),('Ajustes',[9,10])]
+SUBTITLES={0:'Painel',11:'Pendências',1:'Cadastro',4:'Anúncios e SKUs',3:'Custo e preço',14:'Simular cenário',2:'Filamentos e cores',13:'Estoque',5:'Pedidos',6:'Importar',12:'Compras e insumos',7:'Lançamentos',15:'Repasses',8:'Relatórios',9:'Preferências e backup',10:'Atualizações'}
 
 class WorkspaceNavigation(QWidget):
     currentRowChanged=Signal(int)
@@ -20,7 +20,7 @@ class WorkspaceNavigation(QWidget):
     def currentRow(self):return self._current
     def setHorizontalScrollBarPolicy(self,policy):self.groups.setHorizontalScrollBarPolicy(policy)
     def _group_changed(self,index):
-        if not self._busy and index>=0:self.setCurrentRow(self._last.get(index,GROUPS[index][1][0]))
+        if not self._busy and index>=0:self.setCurrentRow((5 if GROUPS[index][0]=='Vendas' else self._last.get(index,GROUPS[index][1][0])))
     def _tab_changed(self,index):
         if not self._busy and index>=0:self.setCurrentRow(GROUPS[self.groups.currentRow()][1][index])
     def setCurrentRow(self,route):
@@ -33,5 +33,5 @@ class WorkspaceNavigation(QWidget):
         self.tabs.setCurrentIndex(GROUPS[group][1].index(route));self.tabs.setVisible(len(GROUPS[group][1])>1);self._busy=False
         if changed:self.currentRowChanged.emit(route)
     def set_compact(self,compact):
-        short=['Início','Produtos','Preços','Materiais','Vendas','Produção','Finanças','Ajustes']
+        short=['Início','Produtos','Preços','Materiais','Vendas','Finanças','Ajustes']
         for i,(title,_) in enumerate(GROUPS):self.groups.item(i).setText(short[i] if compact else title);self.groups.item(i).setToolTip(title)

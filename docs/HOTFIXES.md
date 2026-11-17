@@ -1,5 +1,9 @@
 # Hotfixes e atualização manual
 
+## HF08 — 2.0.9 — 17/11/2026
+
+Gestão do estúdio e insumos, sem Produção no menu. [Guia](HF08_ESTUDIO.md).
+
 ## HF07 — versão 2.0.8 — 17/11/2026
 
 Importação automática com preenchimento dos campos existentes e proteção contra dupla contagem. Esquema 4 com backup antes da migração. [Guia](HF07_IMPORTACAO_AUTOMATICA.md).

@@ -117,7 +117,7 @@ def test_schema_three_migration_and_restore_preserve_source(erp,tmp_path):
     with closing(sqlite3.connect(path)) as db:
         db.executescript(Path('forgeon/db/schema.sql').read_text());db.executemany('INSERT INTO settings VALUES(?,?)',DEFAULTS.items());db.commit();Store.migrate(db,3);db.execute("INSERT INTO products(name) VALUES('Produto legado sintético')");db.commit()
     original=path.read_bytes();erp.s.restore(path);assert path.read_bytes()==original
-    assert erp.s.db.execute('PRAGMA user_version').fetchone()[0]==4 and erp.s.one('SELECT name FROM products')['name']=='Produto legado sintético'
+    assert erp.s.db.execute('PRAGMA user_version').fetchone()[0]==5 and erp.s.one('SELECT name FROM products')['name']=='Produto legado sintético'
 
 
 def test_ui_automatic_import_does_not_ask_sheet_or_mapping(app,erp,tmp_path,monkeypatch):
@@ -154,7 +154,7 @@ def test_conflicting_same_order_in_selected_files_is_refused(erp,tmp_path):
 
 def test_comparison_is_integrated_without_extra_report_tab(app,erp,tmp_path):
     from forgeon.ui.main import MainWindow
-    w=MainWindow(erp);assert w.nav.groups.count()==8 and w.report_tabs.count()==9
+    w=MainWindow(erp);assert w.nav.groups.count()==7 and w.report_tabs.count()==9
     assert not hasattr(w,'shop_table') and w.report_tabs.widget(0) is w.report_browser
     w.close()
 
@@ -162,7 +162,9 @@ def test_comparison_is_integrated_without_extra_report_tab(app,erp,tmp_path):
 def test_after_full_production_is_pending_until_recipe_exists(erp,tmp_path):
     commit_plans(erp,[inspect_file(make_orders(tmp_path))]);r=report(erp,'01/10/2026','31/10/2026')
     assert r['after_production_cents'] is None and r['production_pending']
-    erp.save_product({'name':'Pequeno','weight':'10','hours':'1','packaging':'2','other':'3'});erp.resolve_known_products()
+
+    for p in erp.s.rows("SELECT * FROM products WHERE name='Pequeno'"):erp.save_product({'name':p['name'],'model':p['model'],'weight':'10','hours':'1','packaging':'2','other':'3'},p['id'])
+    erp.freeze_missing_costs();erp.resolve_known_products()
     r=report(erp,'01/10/2026','31/10/2026')
     assert not r['production_pending'] and r['after_production_cents']==r['gross_cents']-r['fees_cents']-r['refunds_cents']-r['production_cents']-r['losses_cents']
     assert r['production_cents']==1410 and r['after_production_cents']==7590 and r['usage_total_grams']=='20'
