@@ -1,6 +1,6 @@
 # Hotfixes e atualização manual
 
-## HF07 — versão 2.0.7 — 17/11/2026
+## HF07 — versão 2.0.8 — 17/11/2026
 
 Importação automática com preenchimento dos campos existentes e proteção contra dupla contagem. Esquema 4 com backup antes da migração. [Guia](HF07_IMPORTACAO_AUTOMATICA.md).
 

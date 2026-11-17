@@ -1,4 +1,4 @@
-# HF07 — Importar e preencher o ERP — 2.0.7
+# HF07 — Importar e preencher o ERP — 2.0.8
 
 Em **Vendas → Importar → Importar planilhas · automático**, selecione o arquivo de pedidos, o resumo gerencial Shopee ou os dois juntos. O aplicativo reconhece abas, cabeçalhos e períodos, mostra uma prévia única e só grava após Confirmar importação. Não é necessário selecionar cada aba ou mapear cada coluna nos formatos reconhecidos.
 

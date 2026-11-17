@@ -690,7 +690,7 @@ class MainWindow(AutomaticImportMixin,RefinementMixin,ManagementMixin,QMainWindo
     @guarded
     def export_report(self):
         r=self.current_report()
-        summary=[{'indicador':LABELS.get(k,k),'valor':money(v) if k.endswith('_cents') else str(v)} for k,v in r.items() if not isinstance(v,list)]
+        summary=[{'indicador':LABELS.get(k,k),'valor':('Pendente' if v is None else money(v)) if k.endswith('_cents') else str(v)} for k,v in r.items() if not isinstance(v,list)]
         self.export_rows('Relatório',[],{'Resumo':summary,'Mais vendidos':r['best_sellers'],'Consumo':r['consumption'],'Uso por item':r['usage_items'],'Uso por pedido':r['usage_orders'],'Valores por pedido':r['financial_rows'],'Mensal':monthly(self.erp),'Estatísticas':r['stats'],'Pedidos':r['orders'],'Despesas':r['expenses'],'Compras':r['purchases'],'Perdas':r['losses'],'Desempenho':mgmt.product_performance(self.erp,self.report_start.text(),self.report_end.text()),'Resumo da loja':r['shop_comparison'],'Totais gerenciais separados':r['shop_totals']})
 
     def build_settings(self):

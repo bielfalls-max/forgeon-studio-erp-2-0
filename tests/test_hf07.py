@@ -181,3 +181,17 @@ def test_unknown_refund_does_not_claim_complete_net_result(erp,tmp_path):
     r=report(erp,'01/10/2026','31/10/2026');assert r['after_production_cents'] is None and r['result_pending']
     with erp.s.transaction():erp.s.db.execute("UPDATE orders SET refund_cents=2000 WHERE id='SYNTH-A'")
     r=report(erp,'01/10/2026','31/10/2026');assert r['after_production_cents']==6590
+
+
+def test_export_report_with_pending_costs_writes_xlsx(app,erp,tmp_path,monkeypatch):
+    from forgeon.ui.main import MainWindow
+    from PySide6.QtWidgets import QFileDialog,QMessageBox
+    from openpyxl import load_workbook
+    target=tmp_path/'exportacao.xlsx';errors=[]
+    commit_plans(erp,[inspect_file(make_orders(tmp_path))])
+    monkeypatch.setattr(QFileDialog,'getSaveFileName',lambda *a,**k:(str(target),'XLSX'));monkeypatch.setattr(QMessageBox,'warning',lambda *a:errors.append(a[-1]))
+    w=MainWindow(erp);w.info=lambda *a:None;w.report_start.setText('2026-10-01');w.report_end.setText('2026-10-31');w.nav.setCurrentRow(8);w.export_report()
+    assert not errors,errors
+    wb=load_workbook(target,read_only=True,data_only=False);summary=list(wb['Resumo'].values);wb.close()
+    assert any('Após taxas e produção completa' in str(row) and 'Pendente' in str(row) for row in summary)
+    w.close()

@@ -74,7 +74,7 @@ jobs:
           assert upgrade['to']==version and upgrade['database_unchanged'] and upgrade['backup_preserved'] and upgrade.get('schema_migrated')
           suites=ElementTree.parse('evidence/resultado-windows.xml').getroot()
           for suite in suites.iter('testsuite'):
-              assert int(suite.get('tests'))>=130 and suite.get('failures')=='0' and suite.get('errors')=='0'
+              assert int(suite.get('tests'))>=131 and suite.get('failures')=='0' and suite.get('errors')=='0'
           PY
       - name: Publicar prévia instalável com evidências
         env:

@@ -1,6 +1,6 @@
-# HF07 · Importação automática — FORGEON STUDIO ERP 2.0.7
+# HF07 · Importação automática — FORGEON STUDIO ERP 2.0.8
 
-Baixe **ForgeonStudioERP-2.0.7-Windows-x64-Setup.exe**. Faça backup, feche o ERP e execute o Setup na mesma conta/pasta. Pacote cumulativo, sem apagar dados.
+Baixe **ForgeonStudioERP-2.0.8-Windows-x64-Setup.exe**. Faça backup, feche o ERP e execute o Setup na mesma conta/pasta. Pacote cumulativo, sem apagar dados.
 
 - Selecione pedidos e resumo Shopee juntos: reconhecimento automático de abas, colunas e períodos, com uma prévia para confirmar.
 - Preenche painel, histórico e relatórios existentes; sem nova aba de gerenciamento de informações.
