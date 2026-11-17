@@ -1,5 +1,15 @@
 # Notas de atualização
 
+## 2.0.12 — HF11 · Receitas e rolagem — 17/11/2026
+
+- Cadastrar via 3MF / G-code abre o produto selecionado como destino e substitui sua receita sem criar outro cadastro. Para um produto novo, escolha essa opção no campo Cadastro.
+- Cores editadas na importação permanecem ao mudar placas/quantidade. Selecionar um produto arquivado exige reativá-lo.
+- Produtos ganha Copiar cores e gramas e Colar / adaptar cores: revisão editável de materiais, cores e consumo por unidade antes de aplicar em outra variante.
+- O tempo de impressão pode ser copiado separadamente. Peso é recalculado pelas gramas; nome, tamanho, embalagem, outros custos e custos de pedidos já congelados são mantidos.
+- Cores existentes mantêm seu preço de referência; novas cores usam o valor informado. Cópia disponível durante a sessão, com backup e histórico ao aplicar.
+- Roda do mouse rola verticalmente; Shift + roda rola horizontalmente. Trackpad aceita ambos os eixos. Tabelas repassam a rolagem ao painel externo quando atingem o limite.
+- Rolagem sobre seletores fechados e campos numéricos não altera seus valores por acidente.
+
 ## 2.0.11 — HF10 · Catálogo físico — 17/11/2026
 
 - Corrige a dependência de ação manual da unificação anterior. Grupos compatíveis são reparados ao abrir o ERP, abrir Produtos e após importar pedidos, com backup e histórico preservados.

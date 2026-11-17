@@ -1,5 +1,9 @@
 # Hotfixes e atualização manual
 
+## HF11 — 2.0.12 — 17/11/2026
+
+Receitas no cadastro selecionado, copiar/adaptar cores e gramas e rolagem em ambos os eixos. [Guia](HF11_RECEITAS.md). Instalador cumulativo, esquema 6 preservado.
+
 ## HF08 — 2.0.9 — 17/11/2026
 
 Gestão do estúdio e insumos, sem Produção no menu. [Guia](HF08_ESTUDIO.md).

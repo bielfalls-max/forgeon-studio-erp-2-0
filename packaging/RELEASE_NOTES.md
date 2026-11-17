@@ -1,11 +1,11 @@
-# HF10 · Catálogo físico — 2.0.11
+# HF11 · Receitas e rolagem — 2.0.12
 
-Baixe **ForgeonStudioERP-2.0.11-Windows-x64-Setup.exe**. Faça backup, feche o ERP e instale na mesma conta/pasta.
+Baixe **ForgeonStudioERP-2.0.12-Windows-x64-Setup.exe**. Faça backup, feche o ERP e instale na mesma conta/pasta.
 
-Corrige os repetidos que permaneceram no HF09: grupos compatíveis são unificados automaticamente ao abrir o programa ou Produtos e após importar vendas. Amy/Amy Rose fica como Amy Rose; repetições de Metal Sonic usam um cadastro físico por tamanho. Títulos de anúncios legados deixam de bloquear o agrupamento.
+**3MF/G-code no produto selecionado:** o cadastro escolhido em Produtos já vem como destino da importação. Salvar atualiza a receita no mesmo produto, sem criar outro ao editar a cor. Cores editadas permanecem ao recalcular placas/quantidade. Para cadastrar outro produto, escolha Criar novo produto físico.
 
-Produtos mostra personagem, tamanho e consumo/custo, sem colunas de anúncios/SKUs/origens. Os vínculos ficam internos para reconhecer vendas e reutilizar a receita cadastrada uma vez.
+**Copiar cores e gramas:** selecione a origem, copie, selecione outra variante e use Colar / adaptar cores. Edite as cores e o consumo na prévia antes de aplicar. O tempo é opcional; peso é recalculado. Nome, tamanho, embalagem, outros custos e valores de pedidos congelados são mantidos. Cores existentes usam a referência atual; novas cores usam o preço informado.
 
-12 cm e 16 cm permanecem separados. Receitas/custos conflitantes ficam para revisão, sem sobrescrever dados. Há backup antes de alterações; pedidos, códigos originais e custos históricos são preservados. Consumo exige receita 3MF/G-code ou cadastro informado.
+**Rolagem:** roda na vertical, Shift + roda na horizontal e trackpad em ambos os eixos. A rolagem passa da tabela ao painel externo no limite. Seletores fechados e campos numéricos não mudam por acidente ao rolar.
 
-[Guia](https://github.com/bielfalls-max/forgeon-studio-erp-2-0/blob/main/docs/HF10_CATALOGO_FISICO.md). Prévia validada automaticamente; confira os produtos físicos e as medidas nos seus cadastros. Esquema 6 preservado.
+[Guia](https://github.com/bielfalls-max/forgeon-studio-erp-2-0/blob/main/docs/HF11_RECEITAS.md). Prévia com verificações automatizadas de interface, regras de negócio, executável e instalação. Backup e histórico antes de aplicar receitas; esquema 6 preservado. Receitas antigas conflitantes permanecem para revisão.

@@ -22,14 +22,15 @@ def number_text(value,places=2):
 
 class SlicingProductDialog(QDialog):
     def __init__(self,erp,path,parent=None,pid=None):
-        super().__init__(parent);self.erp=erp;self.path=Path(path);self.plates=read_slicing(path);self.recipe=None;self.result_data=None
+        super().__init__(parent);self.erp=erp;self.path=Path(path);self.plates=read_slicing(path);self.recipe=None;self.result_data=None;self.color_edits={}
         self.setWindowTitle('Cadastrar produto pelo fatiador');self.resize(1030,790);self.setMinimumSize(850,650)
         layout=QVBoxLayout(self);layout.setSpacing(12)
         title=QLabel('Um produto completo, todas as suas cores');title.setObjectName('pageTitle');layout.addWidget(title)
         note=QLabel('Selecione as placas que formam o mesmo produto e informe quantos produtos completos elas rendem. Peças, mãos e acessórios não são unidades vendidas.');note.setWordWrap(True);layout.addWidget(note)
         fields=QGridLayout();layout.addLayout(fields)
         self.target=QComboBox();self.target.addItem('Criar novo produto físico',None)
-        for p in erp.s.rows('SELECT id,name,model FROM products ORDER BY name'):self.target.addItem(p['name']+' / '+p['model'],p['id'])
+        for p in erp.s.rows('SELECT id,name,model FROM products WHERE archived=0 ORDER BY name'):self.target.addItem(p['name']+' / '+p['model'],p['id'])
+        self.target.setToolTip('Atualiza o cadastro escolhido. Para outro produto, escolha Criar novo produto físico.')
         self.name=QLineEdit(suggested_name(path));self.model=QLineEdit();self.units=QSpinBox();self.units.setRange(1,1000000);self.units.setValue(1)
         self.packaging=QLineEdit('0');self.other=QLineEdit('0')
         for row,(label,widget) in enumerate([('Cadastro',self.target),('Nome físico do produto',self.name),('Modelo / tamanho (opcional)',self.model)]):fields.addWidget(QLabel(label),row,0);fields.addWidget(widget,row,1)
@@ -48,18 +49,23 @@ class SlicingProductDialog(QDialog):
         self.confirm=QCheckBox('Confirmo que as placas selecionadas compõem este produto e a quantidade de produtos completos está correta.');layout.addWidget(self.confirm)
         buttons=QDialogButtonBox(QDialogButtonBox.StandardButton.Save|QDialogButtonBox.StandardButton.Cancel);buttons.button(QDialogButtonBox.StandardButton.Save).setText('Salvar produto, cores e precificação');buttons.accepted.connect(self.save);buttons.rejected.connect(self.reject);layout.addWidget(buttons)
         self.plate_table.itemChanged.connect(self.recalculate);self.units.valueChanged.connect(self.recalculate);self.target.currentIndexChanged.connect(self.target_changed)
-        if pid:self.target.setCurrentIndex(max(0,self.target.findData(pid)))
+        if pid:
+            index=self.target.findData(pid)
+            if index<0:raise ValueError('Reative o produto selecionado antes de atualizar sua receita.')
+            self.target.setCurrentIndex(index)
         self.recalculate()
 
     def target_changed(self):
         pid=self.target.currentData()
         if pid:
             p=self.erp.product(pid);self.name.setText(p['name']);self.model.setText(p['model']);self.packaging.setText(str(Decimal(p['packaging_cents'])/100));self.other.setText(str(Decimal(p.get('_base_other_cents',p['other_cents']))/100))
+        else:
+            self.name.setText(suggested_name(self.path));self.model.clear();self.packaging.setText('0');self.other.setText('0')
 
     def recalculate(self,*args):
+        self.color_edits.update({self.colors.item(row,1).data(Qt.ItemDataRole.UserRole):[self.colors.item(row,col).text() for col in (0,1,3)] for row in range(self.colors.rowCount())})
         selected=[row for row in range(self.plate_table.rowCount()) if self.plate_table.item(row,0).checkState()==Qt.CheckState.Checked]
         if not selected:self.recipe=None;self.summary.setText('Selecione as placas do produto.');self.colors.setRowCount(0);return
-        old={self.colors.item(row,1).text():[self.colors.item(row,col).text() for col in (0,1,3)] for row in range(self.colors.rowCount())}
         self.recipe=combine_plates(self.plates,selected,self.units.value(),self.path.name)
         grams=sum((Decimal(c['grams']) for c in self.recipe['colors']),Decimal(0))
         self.summary.setText(f'{len(selected)} placas · {self.units.value()} produtos completos · POR UNIDADE: {number_text(grams)} g · {hours_text(self.recipe["hours"])}')
@@ -67,9 +73,11 @@ class SlicingProductDialog(QDialog):
         for row,c in enumerate(self.recipe['colors']):
             existing=self.erp.s.one('SELECT * FROM filaments WHERE material=? AND color=?',(c['material'],c['color']))
             kg=str(Decimal(existing['kg_cents'])/100) if existing else self.erp.s.settings()['filament_kg']
-            material,label,kg=old.get(c['color'],[c['material'],c['color'],kg])
+            source_key=(c['material'],c['color'])
+            material,label,kg=self.color_edits.get(source_key,[c['material'],c['color'],kg])
             for col,value in enumerate([material,label,number_text(c['grams'],3),kg]):
                 item=QTableWidgetItem(value)
+                if col==1:item.setData(Qt.ItemDataRole.UserRole,source_key)
                 if col==2:item.setFlags(Qt.ItemFlag.ItemIsEnabled|Qt.ItemFlag.ItemIsSelectable)
                 self.colors.setItem(row,col,item)
 

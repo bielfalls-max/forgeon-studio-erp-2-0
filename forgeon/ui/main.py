@@ -49,6 +49,9 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
     def __init__(self,erp):
         super().__init__()
         self.erp=erp; self.s=erp.s
+        from .scrolling import WheelRouter
+        self.wheel_router=WheelRouter(self);QApplication.instance().installEventFilter(self.wheel_router)
+        self.recipe_clipboard=None
         self.setWindowTitle(f'FORGEON STUDIO • {VERSION} / {HOTFIX}');self.setWindowIcon(app_icon())
         self.resize(1440,900); self.setMinimumSize(1100,700)
         self.setStyleSheet(STYLE)
@@ -179,6 +182,7 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
         p=Page('Produtos','Cadastre o produto físico uma vez. Gramas por cor, tempo e custo alimentam pedidos, relatórios e precificação.')
         self.product_search=QLineEdit();self.product_search.setMinimumWidth(220);self.product_search.setPlaceholderText('Buscar personagem ou tamanho');self.product_search.textChanged.connect(lambda:self.update_products());p.toolbar.addWidget(self.product_search)
         p.button('Cadastrar via 3MF / G-code',self.slicing,True);p.button('+ Cadastro manual',lambda:self.edit_product())
+        p.button('Copiar cores e gramas',self.copy_product_colors);p.button('Colar / adaptar cores',self.paste_product_colors)
         p.button('Editar',lambda:self.edit_product(self.products_table.selected()['id']));p.button('Revisar conflitos',self.unify_products);p.button('Histórico da receita',self.show_recipe_history);p.button('Arquivar / reativar',self.archive_product);p.button('Exportar XLSX',lambda:self.export_rows('Produtos',self.visible_products()))
         self.add_filters(p,'products',material=True,color=True)
         self.show_archived=QCheckBox('Incluir arquivados');self.show_archived.stateChanged.connect(lambda:self.update_products());p.toolbar.addWidget(self.show_archived)
@@ -281,10 +285,28 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
             self.erp.copy_costs(v['source'],v['target']); self.refresh()
 
     @guarded
+    def copy_product_colors(self):
+        from ..business.recipes import copy_colors
+        self.recipe_clipboard=copy_colors(self.erp,self.products_table.selected()['id'])
+        self.statusBar().showMessage('Cores e gramas copiadas de '+self.recipe_clipboard['name']+'. Selecione o destino e clique em Colar / adaptar cores.',15000)
+
+    @guarded
+    def paste_product_colors(self):
+        from .recipes import PasteColorsDialog
+        if not self.recipe_clipboard:raise ValueError('Selecione o produto de origem e clique em Copiar cores e gramas primeiro.')
+        pid=self.products_table.selected()['id']
+        dialog=PasteColorsDialog(self.erp,self.recipe_clipboard,pid,self)
+        if dialog.exec()==QDialog.DialogCode.Accepted:
+            self.last_product_id=pid;self.update_products();self.select_product_row(pid)
+            self.statusBar().showMessage('Cores e gramas aplicadas ao produto selecionado.',7000)
+
+    @guarded
     def slicing(self):
+        pid=None
+        if self.stack.currentIndex()==1 and self.products_table.currentRow()>=0:pid=self.products_table.selected()['id']
         path,_=QFileDialog.getOpenFileName(self,'Cadastrar produto pelo arquivo do fatiador','','Fatiamento (*.3mf *.gcode *.gco)')
         if not path:return
-        dialog=SlicingProductDialog(self.erp,path,self)
+        dialog=SlicingProductDialog(self.erp,path,self,pid=pid)
         if dialog.exec()==QDialog.DialogCode.Accepted:
             pid,linked,frozen=dialog.result_data;self.last_product_id=pid
             self.nav.setCurrentRow(1);self.update_products();self.select_product_row(pid)
@@ -823,6 +845,7 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
                 event.ignore();self.statusBar().showMessage('Aguarde a consulta/download terminar para fechar.');return
         for table in self.findChildren(Table):
             table._save_timer.stop();table.save_layout();table.persistence=None
+        QApplication.instance().removeEventFilter(self.wheel_router)
         super().closeEvent(event)
 
 
@@ -840,7 +863,10 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
         self.product_detail.setText(f"<p><b>{number_text(c['grams'])} g/un.</b><br>{hours_text(c['hours'])}</p><p>Custo: <b>{money(c['total_cents'])}</b><br>Sugerido: <b>{money(c['suggested_cents'])}</b></p><p>{text(', '.join(c['missing']) or 'Receita completa')}</p>")
         source=self.s.one('SELECT detail FROM product_slices WHERE product_id=?',(p['id'],))
         if source:
-            metadata=json.loads(source['detail']);self.product_detail.setText(self.product_detail.text()+f"<p>Arquivo: {text(str(metadata.get('source_name',''))[:200])}<br>{len(metadata.get('plates',[]))} placas / {metadata.get('units',1)} produtos completos</p>")
+            metadata=json.loads(source['detail'])
+            if metadata.get('colors_copied_from'):
+                self.product_detail.setText(self.product_detail.text()+f"<p>Cores/gramas adaptadas de: {text(metadata['colors_copied_from']['name'])}</p>")
+            else:self.product_detail.setText(self.product_detail.text()+f"<p>Arquivo: {text(str(metadata.get('source_name',''))[:200])}<br>{len(metadata.get('plates',[]))} placas / {metadata.get('units',1)} produtos completos</p>")
         self.product_color_details.fill(c['colors'],[('color','Cor'),('grams','g/un.')])
 
     @guarded

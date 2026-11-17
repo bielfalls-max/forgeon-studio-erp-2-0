@@ -75,6 +75,13 @@ def check(destination):
                     erp.save_product({'name':'Super Sonic','model':listing,'notes':'Identificado nas vendas. Receita pendente.'})
                 assert apply(erp,proposals(erp))==1
                 assert not proposals(erp)
+                from .business.recipes import copy_colors
+                from .ui.recipes import PasteColorsDialog
+                target=erp.save_product({'name':'Variação sintética','hours':'1'})
+                payload=copy_colors(erp,pid);dialog=PasteColorsDialog(erp,payload,target,window)
+                dialog.colors.item(0,1).setText('Dourado sintético');dialog.copy_hours.setChecked(True);dialog.save()
+                assert erp.colors(target)[0]['color']=='Dourado sintético' and erp.product(target)['hours']=='1'
+                assert erp.product(target)['weight']=='10'
                 management.save_receipt(erp,'01/11/2026','10','REPASSE-SINTETICO')
                 assert len(management.receipt_rows(erp))==1
                 for index in range(window.stack.count()):

@@ -110,3 +110,10 @@ A compilação Windows exige os testes nativos e as verificações de executáve
 ## HF10 — 2.0.11 — 17/11/2026
 
 146 testes locais, com cinco cenários adicionais: anúncios legados sem observação, reparo automático na reabertura, preservação de tamanhos explícitos, vendas de aliases em anúncios distintos consultando uma receita e tela Produtos com uma linha física sem colunas de anúncio/SKU. Os testes do pacote e instalação Windows são exigidos na publicação. Arquivos particulares não acompanham a distribuição.
+
+
+## HF11 — 2.0.12 — 17/11/2026
+
+157 testes locais com Qt offscreen, incluindo 11 cenários novos: importação no ID selecionado sem duplicar e sem perder edição de cor ao recalcular, criação explícita de novo produto, cópia editável preservando identidade/custos/snapshots, soma de linhas da mesma cor com referência existente preservada, tempo opcional, cancelamento e valores inválidos sem gravação, fluxo de copiar/colar pela tela, rolagem vertical/horizontal/trackpad/diagonal, continuidade entre tabela e painel em ambos os sentidos, campos fechados sem mudanças acidentais, janelas de edição e bloqueio de destino arquivado sem criar outro produto. Saída em resultado_hf11_pytest.txt.
+
+Capturas Qt offscreen de Produtos em 1100×700 e da prévia de adaptação de cores foram inspecionadas. Verificação local do pacote percorreu 16 telas em sete áreas e aplicou uma receita copiada/adaptada em banco temporário, sem erros. Dados e arquivos particulares não acompanham a distribuição. O fluxo de publicação exige testes nativos Windows, verificações do executável e instalado e atualização sobre banco antigo com preservação de backup. As evidências acompanham a versão publicada; validação manual com mouse/trackpad e escala de tela reais continua necessária na prévia.
