@@ -86,3 +86,12 @@ Linux: 110 testes aprovados, incluindo 14 novos cenários de navegação em oito
 Capturas Qt offscreen das telas em 1440×900 e 1100×700 foram inspecionadas. O teste do pacote também exige oito áreas, visita todas as 16 telas e calcula/aplica preço de compra em banco temporário. A compilação/publicação Windows exige os testes nativos e as verificações do executável/instalador/atualização aprovadas; evidências acompanham a versão.
 
 Não se presume que tarifas de energia ou taxas comerciais estejam atualizadas sem dados reais do usuário. Validação manual no Windows 10/11, escala de tela e volume real de dados permanece necessária.
+
+
+## HF07 — 2.0.7 — 17/11/2026
+
+130 testes locais com Qt offscreen, incluindo 20 cenários novos: detecção dos dois formatos/abas, período, privacidade, mesma venda em múltiplos itens, reimportação em ambas as ordens sem somar novamente, total anual versus meses/bases, período sem detalhe e sem rateio, transação revertida, cobertura mais curta preservando a completa, fórmulas/formato desconhecido, snapshots, pagamento conhecido preservado, migração/restauração de esquema 3, interface sem pedir mapeamento nos formatos conhecidos, cancelamento sem escrita, conflitos entre arquivos, telas existentes sem nova aba, resultado após produção pendente/completo e cobertura anual incompleta. Saída em resultado_hf07_pytest.txt.
+
+Os dois arquivos fornecidos foram lidos localmente e verificados em banco temporário descartável, inclusive reimportação invertida. Totais e contagens de outubro conferiram entre as bases correspondentes; informações e arquivos particulares não foram incluídos nos testes públicos, código ou instalador. Capturas Qt offscreen com dados sintéticos foram inspecionadas. O teste do pacote também lê um resumo sintético e reimporta, verificando que não cria vendas nem duplica o total.
+
+A compilação Windows exige os testes nativos e as verificações de executável/instalação/atualização aprovadas; evidências acompanham a versão. Validação manual no Windows 10/11 e com arquivos de outros formatos permanece necessária. Tarifas/custos e receitas de produção precisam ser informados pelo usuário.

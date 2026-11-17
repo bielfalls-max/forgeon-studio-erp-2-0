@@ -26,3 +26,7 @@ LABELS.update({'unit_grams':'Gramas por unidade','unit_hours':'Horas por unidade
 'sent_grams':'Filamento estimado de enviados/devolvidos (g)','unknown_usage_units':'Unidades sem receita','unknown_time_units':'Unidades sem tempo'})
 
 LABELS.update({"losses_cents":"Perdas registradas","received_cents":"Repasses recebidos","received_cash_cents":"Recebimentos menos despesas/compras","allocation":"Consulta por itens selecionados","reserved_grams":"Reservado g","available_grams":"Disponível g","shortage_grams":"Falta g","contribution_cents":"Contribuição","profit_hour_cents":"Contribuição/h"})
+
+LABELS.update({'production_pending':'Custos de produção ou cobertura pendentes','after_production_cents':'Após taxas e produção completa','reported_made_cents':'Vendas informadas · Pedido Feito','reported_paid_cents':'Vendas informadas · Produto Pago'})
+
+LABELS['result_pending']='Dados do resultado ainda pendentes'

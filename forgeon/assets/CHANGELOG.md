@@ -1,5 +1,22 @@
 # Notas de atualização
 
+## 2.0.7 — HF07 · Importação automática — 17/11/2026
+
+- Um botão reconhece pedidos detalhados e resumo gerencial Shopee; permite selecionar os dois arquivos juntos sem escolher abas ou mapear colunas nos formatos reconhecidos.
+- As abas Pedido Feito/Produto Pago são lidas juntas, com períodos identificados e bases preservadas. Totais de intervalo não são somados às linhas mensais/diárias.
+- As informações alimentam o painel, o histórico mensal e os relatórios existentes. Nenhuma nova área ou aba de gerenciamento foi criada.
+- Pedidos entram por ID e item; reimportar atualiza sem duplicar vendas. Arquivos selecionados com versões conflitantes do mesmo pedido exigem revisão, sem escolha arbitrária.
+- Gravação dos arquivos selecionados em uma transação com backup; falhas revertem o conjunto. Custos e receitas já congelados são preservados.
+- Vendas/taxas vêm dos pedidos; gramas, horas e custo completo vêm dos produtos vinculados. O custo inclui material, energia, máquina, embalagem e outros custos cadastrados.
+- Resultado recebe um campo Após taxas e produção completa. Custos ou cobertura detalhada incompletos deixam o valor pendente. Valores por pedido mostra produção da receita e valor após essa produção; perdas adicionais continuam no resultado geral.
+- Resumo anual preenche indicadores mensais sem inventar produtos, pedidos, filamento ou custos. Pagamento do comprador não vira repasse recebido.
+- Cobertura e diferenças são verificadas por período. Meses sem pedidos detalhados não recebem custos fictícios; períodos que cruzam o filtro não são rateados.
+- Histórico mensal e exportações preservam os indicadores gerenciais separados dos valores operacionais. Mapeamento avançado continua disponível para outros formatos.
+- Esquema 4, com backup antes de migrar bancos anteriores e restauração em estágio sem modificar o arquivo de origem.
+
+Os arquivos particulares usados para verificar a compatibilidade não acompanham o código ou instalador. Testes publicados usam somente dados sintéticos.
+
+
 ## 2.0.6 — HF06 · Simplificação — 17/11/2026
 
 - Menu reorganizado: 16 entradas viram oito áreas, com funções relacionadas em subabas. Recursos e dados preservados.

@@ -11,6 +11,7 @@ from ..business.numbers import norm, cents, day, quantity, decimal
 ALIASES = {
  'order_id': ['ID do pedido', 'Número do pedido', 'Order ID', 'ID de pedido'],
  'date': ['Data de criação do pedido', 'Data de criação', 'Order Creation Date', 'Data do pedido', 'Data'],
+ 'paid_date':['Hora do pagamento do pedido','Order Paid Time','Paid Time'],
  'status': ['Status do pedido', 'Order Status', 'Status'],
  'listing': ['Nome do produto', 'Product Name', 'Anúncio', 'Produto'],
  'variation': ['Nome da variação', 'Variation Name', 'Variação'],
@@ -37,7 +38,7 @@ LABELS = {'order_id':'ID do pedido','date':'Data','status':'Status','listing':'P
           'refund':'Reembolso efetivo','revenue':'Receita','orders_count':'Número de pedidos'}
 
 
-LABELS.update({'expected_qty':'Unidades totais declaradas no pedido (checagem de itens completos)','subtotal':'Subtotal dos itens (já com desconto de preço)','buyer_total':'Total pago pelo comprador (referência)','buyer_shipping':'Frete pago pelo comprador (referência)','market_total':'Total global (referência, não somar como venda)','seller_coupon':'Cupom financiado pelo vendedor','seller_coins':'Moedas/cashback financiados pelo vendedor (R$)','return_qty':'Quantidade devolvida','return_status':'Status de devolução/reembolso','commission_gross':'Comissão bruta (referência)','service_gross':'Serviço bruto (referência)'})
+LABELS.update({'paid_date':'Data de pagamento do pedido (não é repasse)','expected_qty':'Unidades totais declaradas no pedido (checagem de itens completos)','subtotal':'Subtotal dos itens (já com desconto de preço)','buyer_total':'Total pago pelo comprador (referência)','buyer_shipping':'Frete pago pelo comprador (referência)','market_total':'Total global (referência, não somar como venda)','seller_coupon':'Cupom financiado pelo vendedor','seller_coins':'Moedas/cashback financiados pelo vendedor (R$)','return_qty':'Quantidade devolvida','return_status':'Status de devolução/reembolso','commission_gross':'Comissão bruta (referência)','service_gross':'Serviço bruto (referência)'})
 
 
 def read_xlsx(path, sheet=None, header_row=None):
@@ -175,6 +176,11 @@ def preview_orders(rows, mapping, filename='', partial=False):
             gross_present=True
         else:gross = order_amount('gross') if gross_present else item_total
         financial={'items_cents':item_total,'seller_discount_cents':discount,**{key+'_cents':order_amount(key) for key in ('commission','service','transaction','commission_gross','service_gross','buyer_total','buyer_shipping','market_total')}}
+        payment_values={day(cell(r,mapping,'paid_date')) for r in members if str(cell(r,mapping,'paid_date')).strip() not in ('','-','--')}
+        if len(payment_values)>1:raise ValueError('Datas de pagamento contraditórias no mesmo pedido.')
+        financial['paid_date']=next(iter(payment_values),None)
+        financial['paid_date_available']=bool(mapping.get('paid_date'))
+        financial['fees_available']=fees_present
         financial['basis']='itens_menos_cupom_vendedor' if mapping.get('subtotal') else 'total_mapeado'
         returned=[decimal(cell(r,mapping,'return_qty',0)) for r in members]
         if any(value!=value.to_integral_value() for value in returned):raise ValueError('Quantidade devolvida deve ser inteira.')
@@ -197,55 +203,64 @@ def preview_orders(rows, mapping, filename='', partial=False):
 
 
 def import_orders(erp, orders, period=None):
-    s = erp.s
-    period=period or import_period(orders)
-    backup = s.backup()
-    with s.transaction():
-        for order in orders:
-            oid = order['id']
-            old_items = {r['item_key']:r for r in s.rows('SELECT * FROM order_items WHERE order_id=?', (oid,))}
-            s.db.execute('INSERT INTO orders(id,date,status,gross_cents,fees_cents,refund_cents,source,partial) VALUES(?,?,?,?,?,?,?,?) '
-                         'ON CONFLICT(id) DO UPDATE SET date=excluded.date,status=excluded.status,gross_cents=excluded.gross_cents,fees_cents=excluded.fees_cents,refund_cents=excluded.refund_cents,partial=excluded.partial,updated=CURRENT_TIMESTAMP',
-                         (oid,order['date'],order['status'],order['gross_cents'],order['fees_cents'],order['refund_cents'],'Shopee',int(bool(order['partial'] or period['partial']))))
-            old_usage={r['item_key']:r for r in s.rows('SELECT i.item_key,u.detail,u.recorded FROM item_usage u JOIN order_items i ON i.id=u.item_id WHERE i.order_id=?',(oid,))}
-            s.db.execute('INSERT INTO order_financials VALUES(?,?) ON CONFLICT(order_id) DO UPDATE SET detail=excluded.detail',(oid,json.dumps(order.get('financial',{}),ensure_ascii=False)))
-            s.db.execute('DELETE FROM order_items WHERE order_id=?',(oid,))
-            for i in order['items']:
-                old = old_items.get(i['item_key'])
-                if old:
-                    origin_id, pid, cost, detail, at = (old[k] for k in ('origin_id','product_id','cost_cents','cost_detail','cost_at'))
-                else:
-                    origin = s.one("SELECT * FROM origins WHERE source='Shopee' AND listing=? AND variation=? AND sku=?", (i['title'],i['variation'],i['original_sku']))
-                    if not origin:
-                        matched=erp.match_product(i['title'],i['variation'])
-                        origin_id = s.db.execute("INSERT INTO origins(source,listing,variation,sku,product_id) VALUES('Shopee',?,?,?,?)", (i['title'],i['variation'],i['original_sku'],matched)).lastrowid
-                        if i['original_sku']:
-                            s.db.execute("INSERT INTO sku_codes VALUES(?,'usado') ON CONFLICT(code) DO NOTHING", (i['original_sku'],))
-                        pid = matched
-                    else:
-                        origin_id, pid = origin['id'], origin['product_id'] if origin['active'] else None
-                        if pid is None and origin['active']:
-                            pid=erp.match_product(i['title'],i['variation'])
-                            if pid:s.db.execute('UPDATE origins SET product_id=? WHERE id=?',(pid,origin_id))
-                    cost = detail = at = None
-                    if pid:
-                        calc = erp.cost(pid)
-                        if not calc['missing']:
-                            cost, detail, at = calc['total_cents'], json.dumps(calc, ensure_ascii=False), datetime.now().isoformat(timespec='seconds')
-                cursor=s.db.execute('INSERT INTO order_items(order_id,item_key,origin_id,product_id,original_sku,title,variation,qty,unit_cents,cost_cents,cost_detail,cost_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
-                             (oid,i['item_key'],origin_id,pid,i['original_sku'],i['title'],i['variation'],i['qty'],i['unit_cents'],cost,detail,at))
-                previous=old_usage.get(i['item_key'])
-                usage=previous['detail'] if previous else detail
-                recorded=previous['recorded'] if previous else at
-                if usage is None and pid:
-                    c=erp.cost(pid)
-                    if decimal(c['grams'])>0 or decimal(c['hours'])>0:usage=json.dumps(c,ensure_ascii=False);recorded=datetime.now().isoformat(timespec='seconds')
-                if usage:s.db.execute('INSERT INTO item_usage VALUES(?,?,?)',(cursor.lastrowid,usage,recorded or datetime.now().isoformat(timespec='seconds')))
-        period=period or import_period(orders)
-        for key,value in (('active_month',period['active_month']),('last_import_start',period['start']),('last_import_end',period['end'])):
-            s.db.execute('INSERT INTO settings VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',(key,value))
-        s.log('importar_pedidos', {'pedidos':len(orders),'backup':backup.name})
+    s=erp.s;period=period or import_period(orders);backup=s.backup()
+    with s.transaction():_write_orders(erp,orders,period,backup.name)
     return backup
+
+
+def _write_orders(erp,orders,period,backup_name=''):
+    s=erp.s
+    for order in orders:
+        oid = order['id']
+        old_items = {r['item_key']:r for r in s.rows('SELECT * FROM order_items WHERE order_id=?', (oid,))}
+        s.db.execute('INSERT INTO orders(id,date,status,gross_cents,fees_cents,refund_cents,source,partial) VALUES(?,?,?,?,?,?,?,?) '
+                     'ON CONFLICT(id) DO UPDATE SET date=excluded.date,status=excluded.status,gross_cents=excluded.gross_cents,fees_cents=excluded.fees_cents,refund_cents=excluded.refund_cents,partial=excluded.partial,updated=CURRENT_TIMESTAMP',
+                     (oid,order['date'],order['status'],order['gross_cents'],order['fees_cents'],order['refund_cents'],'Shopee',int(bool(order['partial'] or period['partial']))))
+        old_usage={r['item_key']:r for r in s.rows('SELECT i.item_key,u.detail,u.recorded FROM item_usage u JOIN order_items i ON i.id=u.item_id WHERE i.order_id=?',(oid,))}
+        financial=dict(order.get('financial',{}))
+        previous=s.one('SELECT detail FROM order_financials WHERE order_id=?',(oid,))
+        previous=json.loads(previous['detail']) if previous else {}
+        if not financial.get('paid_date_available') and previous.get('paid_date_available'):
+            financial.update(paid_date=previous.get('paid_date'),paid_date_available=True)
+        s.db.execute('INSERT INTO order_financials VALUES(?,?) ON CONFLICT(order_id) DO UPDATE SET detail=excluded.detail',(oid,json.dumps(financial,ensure_ascii=False)))
+        s.db.execute('DELETE FROM order_items WHERE order_id=?',(oid,))
+        for i in order['items']:
+            old = old_items.get(i['item_key'])
+            if old:
+                origin_id, pid, cost, detail, at = (old[k] for k in ('origin_id','product_id','cost_cents','cost_detail','cost_at'))
+            else:
+                origin = s.one("SELECT * FROM origins WHERE source='Shopee' AND listing=? AND variation=? AND sku=?", (i['title'],i['variation'],i['original_sku']))
+                if not origin:
+                    matched=erp.match_product(i['title'],i['variation'])
+                    origin_id = s.db.execute("INSERT INTO origins(source,listing,variation,sku,product_id) VALUES('Shopee',?,?,?,?)", (i['title'],i['variation'],i['original_sku'],matched)).lastrowid
+                    if i['original_sku']:
+                        s.db.execute("INSERT INTO sku_codes VALUES(?,'usado') ON CONFLICT(code) DO NOTHING", (i['original_sku'],))
+                    pid = matched
+                else:
+                    origin_id, pid = origin['id'], origin['product_id'] if origin['active'] else None
+                    if pid is None and origin['active']:
+                        pid=erp.match_product(i['title'],i['variation'])
+                        if pid:s.db.execute('UPDATE origins SET product_id=? WHERE id=?',(pid,origin_id))
+                cost = detail = at = None
+                if pid:
+                    calc = erp.cost(pid)
+                    if not calc['missing']:
+                        cost, detail, at = calc['total_cents'], json.dumps(calc, ensure_ascii=False), datetime.now().isoformat(timespec='seconds')
+            cursor=s.db.execute('INSERT INTO order_items(order_id,item_key,origin_id,product_id,original_sku,title,variation,qty,unit_cents,cost_cents,cost_detail,cost_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+                         (oid,i['item_key'],origin_id,pid,i['original_sku'],i['title'],i['variation'],i['qty'],i['unit_cents'],cost,detail,at))
+            previous=old_usage.get(i['item_key'])
+            usage=previous['detail'] if previous else detail
+            recorded=previous['recorded'] if previous else at
+            if usage is None and pid:
+                c=erp.cost(pid)
+                if decimal(c['grams'])>0 or decimal(c['hours'])>0:usage=json.dumps(c,ensure_ascii=False);recorded=datetime.now().isoformat(timespec='seconds')
+            if usage:s.db.execute('INSERT INTO item_usage VALUES(?,?,?)',(cursor.lastrowid,usage,recorded or datetime.now().isoformat(timespec='seconds')))
+    period=period or import_period(orders)
+    for key,value in (('active_month',period['active_month']),('last_import_start',period['start']),('last_import_end',period['end'])):
+        s.db.execute('INSERT INTO settings VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',(key,value))
+    s.db.execute('INSERT INTO order_coverage(start,end,kind,recorded) VALUES(?,?,?,?) ON CONFLICT(start,end,kind) DO UPDATE SET recorded=excluded.recorded',
+                 (period['start'],period['end'],period.get('coverage_kind','unknown'),datetime.now().isoformat(timespec='seconds')))
+    s.log('importar_pedidos',{'pedidos':len(orders),'backup':backup_name})
 
 
 def preview_stats(rows, mapping, start, end, partial):
@@ -300,11 +315,12 @@ def import_period(orders,filename=''):
     if not orders:raise ValueError('Arquivo sem pedidos.')
     start=min(o['date'] for o in orders);end=max(o['date'] for o in orders)
     match=re.search(r'(20\d{6})[_-](20\d{6})',filename)
+    declared=False
     if match:
         declared_start=datetime.strptime(match[1],'%Y%m%d').date().isoformat()
         declared_end=datetime.strptime(match[2],'%Y%m%d').date().isoformat()
-        if declared_start<=start<=end<=declared_end:start,end=declared_start,declared_end
+        if declared_start<=start<=end<=declared_end:start,end=declared_start,declared_end;declared=True
     months=sorted({o['date'][:7] for o in orders})
     last=date.fromisoformat(end)
     partial=start[8:]!='01' or end[8:]!=str(monthrange(last.year,last.month)[1]) or 'toship' in filename.lower()
-    return {'start':start,'end':end,'months':months,'active_month':months[-1],'partial':partial}
+    return {'start':start,'end':end,'months':months,'active_month':months[-1],'partial':partial,'coverage_kind':'all' if 'order.all' in filename.lower() and declared else ('toship' if 'toship' in filename.lower() else 'unknown')}

@@ -63,6 +63,13 @@ def check(destination):
                 assert cost['purchase_kg_cents']==12000
                 use_purchase(erp,fid,cost['purchase_id'])
                 assert erp.cost(pid)['material_cents']==120
+                from .importers.automatic import inspect_file,commit_plans,METRICS
+                from openpyxl import Workbook
+                sample=Path(folder)/'resumo.shopee.20260101-20260131.xlsx';wb=Workbook();ws=wb.active;ws.title='Pedido Feito';ws.append(['Data']+list(METRICS.values()))
+                ws.append(['01/01/2026-31/01/2026',100,100,2,50,10,5,'20%',0,0,0,0]);ws.append(['01/01/2026',100,100,2,50,10,5,'20%',0,0,0,0]);wb.save(sample)
+                plan=inspect_file(sample);commit_plans(erp,[plan]);commit_plans(erp,[plan])
+                from .reports.finance import report
+                checked=report(erp,'01/01/2026','31/01/2026');assert checked['shop_totals'][0]['revenue_cents']==10000 and checked['gross_cents']==0
                 management.save_receipt(erp,'01/11/2026','10','REPASSE-SINTETICO')
                 assert len(management.receipt_rows(erp))==1
                 for index in range(window.stack.count()):

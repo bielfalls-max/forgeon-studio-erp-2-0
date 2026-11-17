@@ -97,6 +97,8 @@ def report(erp, start, end, product_id=None, status='', filters=None):
                 'snapshot_at':i.get('usage_at') or i.get('cost_at'),'partial':not known_grams or not known_hours or i['cost_cents'] is None})
             if i['cost_cents'] is None:pending+=1;partial=True
             else:production+=i['cost_cents']*i['qty'];order_cost+=i['cost_cents']*i['qty']
+        complete=all(i['cost_cents'] is not None for i in picked)
+        financial_rows[-1].update(production_cents=order_cost if complete else None,after_production_cents=financial_rows[-1]['net_cents']-order_cost if complete and financial.get('fees_available') is not False else None)
         usage_orders.append({'order_id':o['id'],'date':o['date'],'status':o['status'],'qty':sum(i['qty'] for i in picked),
             'grams':str(order_grams) if known_usage else None,'hours':str(order_hours) if known_time else None,'production_cents':order_cost if any(item['cost_cents'] is not None for item in picked) else None,
             'unknown_units':order_unknown,'partial':bool(order_unknown or any(i['cost_cents'] is None for i in picked))})
@@ -109,7 +111,9 @@ def report(erp, start, end, product_id=None, status='', filters=None):
     stat_total = sum(r['revenue_cents'] for r in full_stats)
     if len(full_stats)!=len(stats) or any(r['partial'] for r in stats):
         partial = True
-    if not selected or not stats or narrowed or status:
+    from .shop import comparison,totals,reconciled,covered
+    shop_rows=comparison(erp,start,end)
+    if not selected or (not stats and not reconciled(shop_rows,start,end)) or narrowed or status:
         partial = True
     # Stats are comparison only. They NEVER enter revenue or profits.
     if stats and abs(Decimal(stat_total)-Decimal(gross)) > 1:
@@ -122,7 +126,12 @@ def report(erp, start, end, product_id=None, status='', filters=None):
     def rounded(n):
         from decimal import ROUND_HALF_UP
         return int(Decimal(n).quantize(Decimal('1'),rounding=ROUND_HALF_UP))
-    return {'start':start,'end':end,'partial':bool(partial),'orders_count':len(selected),'pending_items':pending,
+    production_pending=bool(pending or (shop_rows and (not selected or not covered(s,start,end))))
+    fees_pending=any(json.loads(o.get('financial_detail') or '{}').get('fees_available') is False for o in selected if status_kind(o['status'])!='cancelado')
+    refunds_pending=any(o['refund_cents']==0 and (status_kind(o['status'])=='devolucao' or json.loads(o.get('financial_detail') or '{}').get('returned_qty') or json.loads(o.get('financial_detail') or '{}').get('return_status')) for o in selected if status_kind(o['status'])!='cancelado')
+    result_pending=production_pending or fees_pending or refunds_pending
+    after_production=rounded(gross-fees-refunds-production-loss_total) if selected and not result_pending else None
+    return {'result_pending':bool(result_pending),'production_pending':production_pending,'after_production_cents':after_production,'shop_comparison':shop_rows,'shop_totals':totals(shop_rows),'start':start,'end':end,'partial':bool(partial),'orders_count':len(selected),'pending_items':pending,
             'gross_cents':rounded(gross),'fees_cents':rounded(fees),'refunds_cents':rounded(refunds),
             'production_cents':production,'expenses_cents':expense_total,'purchases_cents':purchase_total,
             'operating_cents':rounded(gross-fees-refunds-production-expense_total-loss_total),
@@ -140,10 +149,10 @@ def report(erp, start, end, product_id=None, status='', filters=None):
 
 def monthly(erp):
     from calendar import monthrange
-    months = {r['month'] for r in erp.s.rows("SELECT substr(date,1,7) month FROM orders UNION SELECT substr(date,1,7) FROM expenses UNION SELECT substr(date,1,7) FROM purchases UNION SELECT substr(start,1,7) FROM stats UNION SELECT substr(date,1,7) FROM production_events UNION SELECT substr(date,1,7) FROM settlements")}
+    months = {r['month'] for r in erp.s.rows("SELECT substr(date,1,7) month FROM orders UNION SELECT substr(date,1,7) FROM expenses UNION SELECT substr(date,1,7) FROM purchases UNION SELECT substr(start,1,7) FROM stats UNION SELECT substr(date,1,7) FROM production_events UNION SELECT substr(date,1,7) FROM settlements UNION SELECT substr(start,1,7) FROM shop_metrics WHERE grain!='period'")}
     result = []
     for month in sorted(months):
         y,m = map(int,month.split('-'))
         r = report(erp,f'{month}-01',f'{month}-{monthrange(y,m)[1]}')
-        result.append({'month':month, **{k:v for k,v in r.items() if k.endswith('_cents') or k=='partial'}})
+        result.append({'month':month,'reported_made_cents':next((v['revenue_cents'] for v in r['shop_totals'] if v['basis']=='Pedido Feito'),None),'reported_paid_cents':next((v['revenue_cents'] for v in r['shop_totals'] if v['basis']=='Produto Pago'),None), **{k:v for k,v in r.items() if k.endswith('_cents') or k=='partial'}})
     return result

@@ -1,16 +1,13 @@
-# HF06 · Simplificação — FORGEON STUDIO ERP 2.0.6
+# HF07 · Importação automática — FORGEON STUDIO ERP 2.0.7
 
-Baixe **ForgeonStudioERP-2.0.6-Windows-x64-Setup.exe** nos Assets. Faça backup, feche o ERP e execute o Setup na mesma conta/pasta. Pacote cumulativo; sem desinstalar ou apagar dados.
+Baixe **ForgeonStudioERP-2.0.7-Windows-x64-Setup.exe**. Faça backup, feche o ERP e execute o Setup na mesma conta/pasta. Pacote cumulativo, sem apagar dados.
 
-- **Menu mais simples:** oito áreas com subabas, reunindo ferramentas relacionadas.
-- **Precificação:** editor central de custos/taxas, edição direta do produto e comparação sob demanda. Ajustes deixa de repetir os parâmetros financeiros.
-- **Custos editáveis:** referência por kg ao lado do preço da última compra, incluindo frete/peso, com aplicação confirmada e data de revisão. Custos congelados dos pedidos e lotes preservados.
-- **Filtros:** datas, pedido, produto, material/cor, status e categoria onde aplicáveis; exportação de Pedidos corrigida para respeitar o recorte. Perdas e vínculos de recebimentos passam a seguir os filtros.
-- **Consulta para precificar:** período de vendas no simulador, ID do pedido nos relatórios e datas lembradas nos filtros salvos.
-- **Interface:** ações de produção conforme a subaba, rolagem em janelas menores, comparação sem catálogo repetido e ajuda mantida no topo.
+- Selecione pedidos e resumo Shopee juntos: reconhecimento automático de abas, colunas e períodos, com uma prévia para confirmar.
+- Preenche painel, histórico e relatórios existentes; sem nova aba de gerenciamento de informações.
+- Pedidos alimentam vendas/taxas; receitas dos produtos alimentam gramas, tempo e custo completo. Resultado recebe valor após taxas e produção, com pendências quando faltam custos ou detalhes.
+- Reimportação por ID/item sem repetir vendas. Pedido Feito, Produto Pago, total do intervalo e meses não são somados entre si.
+- Arquivos selecionados gravados em transação única, com backup; custos já congelados preservados. Esquema 4 com migração protegida.
 
-Sem novos valores reais informados, energia, máquina e taxas existentes continuam referências para você revisar no editor. Não há atualização presumida de preços de mercado. O controle local funciona sem internet.
+As duas planilhas não fornecem gramas, tempo e todos os custos de fabricação: produtos/receitas e parâmetros precisam estar cadastrados. Pagamento do comprador não cria repasse. Dados gerenciais não viram pedidos fictícios ou lucro completo quando falta cobertura.
 
-[Guia e resultado da revisão](https://github.com/bielfalls-max/forgeon-studio-erp-2-0/blob/main/docs/HF06_SIMPLIFICACAO.md).
-
-Prévia para validação. Evidências anexadas de testes no Windows, abertura das 16 telas em oito áreas, instalação e preservação do banco/backups. A validação manual no seu Windows e com seus arquivos continua necessária.
+[Guia de uso](https://github.com/bielfalls-max/forgeon-studio-erp-2-0/blob/main/docs/HF07_IMPORTACAO_AUTOMATICA.md). Prévia para validação. Evidências anexadas de testes no Windows, pacote, instalação e preservação de dados. Arquivos particulares não acompanham a distribuição; testes públicos usam dados sintéticos.

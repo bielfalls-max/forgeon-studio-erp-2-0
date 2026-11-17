@@ -74,3 +74,8 @@ Organização, oficina e gestão ficam em módulos separados da interface. A bai
 ## HF06 — navegação e filtros, esquema 3 mantido
 
 `ui/navigation.py` agrupa rotas em oito áreas preservando os 16 destinos internos para atalhos e pendências. `ui/filters.py` fornece datas opcionais e seleção de produto/material/cor/pedido; `business/filtering.py` compartilha regras de consulta/exportação. `business/costs.py` calcula referência por kg da última compra com Decimal, frete e massa, sem aplicar automaticamente. Revisões de parâmetros e material ficam em preferências/auditoria; não há nova migração nem reescrita de snapshots históricos. `ui/refinement.py` conecta essas consultas à interface.
+
+
+## HF07 — esquema 4
+
+`migration_v4.sql` acrescenta `shop_metrics` (base/granularidade/período únicos, detalhes allowlist) e `order_coverage` (intervalos declarados de pedidos). `importers/automatic.py` reconhece arquivos e produz planos sem escrita. `commit_plans` grava os planos em uma transação após backup; `_write_orders` é compartilhado com o importador manual. `reports/shop.py` seleciona períodos sem sobreposição e compara indicadores sem entrar na receita operacional. Datas de pagamento ficam no detalhe financeiro do pedido, distintas de settlements/repasses. Os resultados alimentam as telas existentes; não há nova rota de navegação.

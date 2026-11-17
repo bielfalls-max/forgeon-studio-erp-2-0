@@ -393,7 +393,7 @@ class ManagementMixin:
         from PySide6.QtGui import QShortcut,QKeySequence
         from .help import show_help
         self.shortcuts=[]
-        for key,callback in [('F1',lambda:show_help(self,self.nav_titles[self.stack.currentIndex()])),('Ctrl+F',self.search_everywhere),('Ctrl+N',lambda:self.edit_product()),('Ctrl+I',self.import_order_file)]:
+        for key,callback in [('F1',lambda:show_help(self,self.nav_titles[self.stack.currentIndex()])),('Ctrl+F',self.search_everywhere),('Ctrl+N',lambda:self.edit_product()),('Ctrl+I',self.import_automatic_files)]:
             shortcut=QShortcut(QKeySequence(key),self);shortcut.activated.connect(callback);self.shortcuts.append(shortcut)
         for tabs in self.findChildren(QTabWidget):
             button=QPushButton('ⓘ');button.setObjectName('helpButton');button.setToolTip('Como usar esta subaba');button.clicked.connect(lambda checked=False,t=tabs:show_help(self,t.tabText(t.currentIndex())))
@@ -415,7 +415,7 @@ class ManagementMixin:
         self.report_presets=QComboBox();layout.addWidget(self.report_presets);self.reload_presets()
         for label,fn in [('Mês da data inicial',lambda:self.report_period('mes')),('1ª quinzena',lambda:self.report_period('primeira')),('2ª quinzena',lambda:self.report_period('segunda')),('Aplicar filtro salvo',self.load_report_preset),('Salvar filtro',self.save_report_preset),('Limpar filtros',self.clear_report_filters)]:
             button=QPushButton(label);button.clicked.connect(fn);layout.addWidget(button)
-        note=QLabel('Cor/material selecionam itens que usam o filamento; os valores não são rateados entre cores. Desempenho e histórico mensal usam o período geral.');note.setWordWrap(True);p.layout.addWidget(note)
+        note=QLabel('Cor/material selecionam itens que usam o filamento; os valores não são rateados entre cores. Resumo da loja, desempenho e histórico mensal são gerais do período; não seguem filtros de produto/SKU/cor.');note.setWordWrap(True);p.layout.addWidget(note)
 
     def report_filters(self):return {**{k:w.text().strip() for k,w in self.report_extra.items()},'coverage':self.report_coverage.currentData()}
 

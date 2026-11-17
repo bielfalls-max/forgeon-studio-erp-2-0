@@ -11,6 +11,7 @@ FORGEON_STUDIO_ERP_2_0/
   docs/HF02_PRODUCAO.md
   docs/HF03_05_GUIA.md
   docs/HF06_SIMPLIFICACAO.md
+  docs/HF07_IMPORTACAO_AUTOMATICA.md
   docs/HOTFIXES.md
   docs/INSTALADOR_WINDOWS.md
   docs/REGRAS_FINANCEIRAS.md
@@ -18,6 +19,7 @@ FORGEON_STUDIO_ERP_2_0/
   docs/imagens/hf01-painel.png
   docs/resultado_hf05_pytest.txt
   docs/resultado_hf06_pytest.txt
+  docs/resultado_hf07_pytest.txt
   docs/resultado_pytest.txt
   forgeon/__init__.py
   forgeon/__main__.py
@@ -42,17 +44,21 @@ FORGEON_STUDIO_ERP_2_0/
   forgeon/db/__init__.py
   forgeon/db/migration_v2.sql
   forgeon/db/migration_v3.sql
+  forgeon/db/migration_v4.sql
   forgeon/db/schema.sql
   forgeon/db/store.py
   forgeon/importers/__init__.py
+  forgeon/importers/automatic.py
   forgeon/importers/catalog.py
   forgeon/importers/sheets.py
   forgeon/importers/slicing.py
   forgeon/packaging_check.py
   forgeon/reports/__init__.py
   forgeon/reports/finance.py
+  forgeon/reports/shop.py
   forgeon/reports/xlsx.py
   forgeon/ui/__init__.py
+  forgeon/ui/automatic.py
   forgeon/ui/charts.py
   forgeon/ui/filters.py
   forgeon/ui/help.py
@@ -90,6 +96,7 @@ FORGEON_STUDIO_ERP_2_0/
   tests/test_hf02.py
   tests/test_hf03_05.py
   tests/test_hf06.py
+  tests/test_hf07.py
   tests/test_hotfix.py
   tests/test_orders.py
   tests/test_packaging.py
