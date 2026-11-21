@@ -77,12 +77,13 @@ def test_stats_separate_and_reimport(erp):
 
 
 def test_import_failure_rolls_back_all_orders(erp):
+    backups_before=len(list((erp.s.path.parent/'backups').glob('*.sqlite3')))
     orders,_=preview_orders([row('A'),row('B')],M)
     orders[1]['items'][0]['qty']=0
     with pytest.raises(Exception):import_orders(erp,orders)
     assert erp.s.rows('SELECT * FROM orders')==[]
     assert erp.s.rows('SELECT * FROM origins')==[]
-    assert len(list((erp.s.path.parent/'backups').glob('*.sqlite3')))==1
+    assert len(list((erp.s.path.parent/'backups').glob('*.sqlite3')))==backups_before+1
 
 
 def test_toship_and_ambiguous_totals(erp):

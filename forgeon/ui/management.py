@@ -240,9 +240,11 @@ class ManagementMixin:
         pid=self.sim_product.currentData()
         if pid is None:raise ValueError('Selecione um produto.')
         existing=self.sim_scenarios.get(pid,{});settings={**self.s.settings(),**existing.get('settings',{})};product=self.erp.product(pid)
+        for key,override in [('power_w','_power_w'),('machine_hour','_machine_hour')]:
+            if key not in existing.get('settings',{}) and override in product:settings[key]=product[override]
         fields=[('filament_change','Variação do filamento % (-100 a 1000)',existing.get('filament_change','0')),
                 ('packaging','Embalagem R$/un.',existing.get('packaging',str(Decimal(product['packaging_cents'])/100))),('other','Outros R$/un.',existing.get('other',str(Decimal(product['other_cents'])/100)))]
-        for key,label in [('energy_kwh','Energia R$/kWh'),('power_w','Potência W'),('machine_hour','Máquina R$/h'),('fee_percent','Taxas %'),('fee_fixed','Taxa fixa R$/un.'),('profit_percent','Margem/acréscimo %')]:fields.append((key,label,settings[key]))
+        for key,label in [('energy_kwh','Energia R$/kWh'),('power_w','Consumo médio W'),('machine_hour','Máquina R$/h'),('labor_unit','Mão de obra R$/un.'),('loss_percent','Reserva de perdas %'),('fee_percent','Taxas %'),('fee_fixed','Taxa fixa R$/un.'),('profit_percent','Margem/acréscimo %')]:fields.append((key,label,settings.get(key,'0')))
         modes=[('Margem sobre venda','margem'),('Acréscimo sobre custo','acrescimo')];modes.sort(key=lambda item:item[1]!=settings['pricing_mode']);fields.append(('pricing_mode','Método',modes))
         v=self.form('Cenário temporário',fields,'Somente simulação em memória. Valores do produto e configurações atuais não serão alterados.')
         if v:

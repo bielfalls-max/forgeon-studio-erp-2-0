@@ -82,6 +82,12 @@ def check(destination):
                 dialog.colors.item(0,1).setText('Dourado sintético');dialog.copy_hours.setChecked(True);dialog.save()
                 assert erp.colors(target)[0]['color']=='Dourado sintético' and erp.product(target)['hours']=='1'
                 assert erp.product(target)['weight']=='10'
+                from .ui.production import SlicingProductDialog
+                quote_file=Path(folder)/'orcamento.gcode'
+                quote_file.write_text('; total filament weight [g] : 10\n; total estimated time: 1h\n; filament: 1\n; filament_colour = #000000\n; filament_type = PLA\n; printer_model = Bambu Lab A1\n')
+                quote=SlicingProductDialog(erp,quote_file,window,quote=True);before=store.db.total_changes;quote.save()
+                assert quote.quote_data and not quote.quote_data['missing'] and quote.quote_data['labor_cents']==200
+                assert store.db.total_changes==before
                 management.save_receipt(erp,'01/11/2026','10','REPASSE-SINTETICO')
                 assert len(management.receipt_rows(erp))==1
                 for index in range(window.stack.count()):

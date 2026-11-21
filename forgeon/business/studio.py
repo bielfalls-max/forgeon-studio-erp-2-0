@@ -11,7 +11,7 @@ def catalog_from_sales(erp):
             name=origin['variation'].strip() or origin['listing'].strip()
             # Identidade conservadora: anúncio + variação; SKU isolado não funde produtos.
             existing=s.one('SELECT id FROM products WHERE name=? AND model=?',(name,origin['listing']))
-            pid=existing['id'] if existing else s.db.execute('INSERT INTO products(name,model,notes) VALUES(?,?,?)',(name,origin['listing'],'Identificado nas vendas. Vincule 3MF/G-code e revise custos antes de precificar.')).lastrowid
+            pid=existing['id'] if existing else s.db.execute('INSERT INTO products(name,model,notes,packaging_cents) VALUES(?,?,?,?)',(name,origin['listing'],'Identificado nas vendas. Vincule 3MF/G-code e revise custos antes de precificar.',cents(s.settings().get('packaging_default','0')))).lastrowid
             count+=not bool(existing)
             key=physical_key(origin['variation'],'',draft=True) if origin['variation'].strip() else None
             if key:s.db.execute('INSERT INTO product_identities VALUES(?,?) ON CONFLICT(identity_key) DO UPDATE SET product_id=excluded.product_id',(key_string(key),pid));s.db.execute('UPDATE products SET name=?,model=? WHERE id=?',(('Amy Rose' if key[0]=='amy' else key[0].title()),key[1]+' cm',pid))

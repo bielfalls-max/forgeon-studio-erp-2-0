@@ -15,6 +15,8 @@ def simulator(erp,pid,settings=None,packaging=None,other=None,filament_change='0
     except Exception:raise ValueError('Variação do filamento inválida.') from None
     if not change.is_finite() or change< -100 or change>1000:raise ValueError('Variação do filamento deve ficar entre -100% e 1000%.')
     factor=1+change/100;product=dict(original)
+    if settings and 'power_w' in settings:product.pop('_power_w',None)
+    if settings and 'machine_hour' in settings:product.pop('_machine_hour',None)
     if packaging is not None:product['packaging_cents']=cents(packaging)
     if other is not None:product['other_cents']=cents(other)
     revised=[{**c,'kg_cents':int((Decimal(c['kg_cents'])*factor).quantize(Decimal('1'),rounding=ROUND_HALF_UP))} for c in colors]

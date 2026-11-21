@@ -1,5 +1,9 @@
 # Hotfixes e atualização manual
 
+## HF12 — 2.0.13 — 20/11/2026
+
+Orçamento por G-code/3MF sem cadastro, importação de várias placas e custos editáveis de embalagem, mão de obra, perdas e impressoras. [Guia e referências](HF12_PROJETOS_E_CUSTOS.md). Esquema 6 preservado.
+
 ## HF11 — 2.0.12 — 17/11/2026
 
 Receitas no cadastro selecionado, copiar/adaptar cores e gramas e rolagem em ambos os eixos. [Guia](HF11_RECEITAS.md). Instalador cumulativo, esquema 6 preservado.

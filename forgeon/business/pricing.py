@@ -10,10 +10,14 @@ def calculate(product, colors, settings):
     grams = sum((decimal(c['grams'], 'Gramas') for c in colors), Decimal(0)) if colors else decimal(product['weight'], 'Peso')
     hours = decimal(product['hours'], 'Horas')
     material = sum((decimal(c['grams']) / 1000 * Decimal(c['kg_cents']) / 100 for c in colors), Decimal(0)) if colors else grams / 1000 * decimal(settings['filament_kg'])
-    energy = hours * decimal(settings['power_w']) / 1000 * decimal(settings['energy_kwh'])
-    machine = hours * decimal(settings['machine_hour'])
+    energy = hours * decimal(product.get('_power_w',settings['power_w'])) / 1000 * decimal(settings['energy_kwh'])
+    machine = hours * decimal(product.get('_machine_hour',settings['machine_hour']))
     manufacture = Decimal(product['manual_cents']) / 100 if product['manual_cents'] is not None else material + energy + machine
-    total = manufacture + Decimal(product['packaging_cents'] + product['other_cents']) / 100
+    loss_rate=decimal(settings.get('loss_percent','0'),'Perdas')
+    if loss_rate>100:raise ValueError('Perdas: informe de 0 a 100%.')
+    loss=manufacture*loss_rate/100
+    labor=decimal(settings.get('labor_unit','0'),'Mão de obra')
+    total = manufacture + loss + labor + Decimal(product['packaging_cents'] + product['other_cents']) / 100
     rate = decimal(settings['fee_percent'], 'Taxa percentual') / 100
     profit = decimal(settings['profit_percent'], 'Margem/acréscimo') / 100
     fixed = decimal(settings['fee_fixed'], 'Taxa fixa')
@@ -32,6 +36,7 @@ def calculate(product, colors, settings):
         missing.append('custo zero')
     return {'grams': str(grams), 'hours': str(hours), 'material_cents': round_cents(material), 'energy_cents': round_cents(energy),
             'machine_cents': round_cents(machine), 'manufacture_cents': round_cents(manufacture), 'manual': product['manual_cents'] is not None,
+            'loss_cents':round_cents(loss),'labor_cents':round_cents(labor),'loss_percent':str(loss_rate),
             'packaging_cents': product['packaging_cents'], 'other_cents': product['other_cents'], 'total_cents': round_cents(total),
             'suggested_cents': round_cents(suggested), 'fees_cents': round_cents(suggested * rate + fixed),
             'profit_cents': round_cents(suggested * (1 - rate) - fixed - total), 'missing': missing,

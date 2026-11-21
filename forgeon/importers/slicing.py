@@ -26,21 +26,23 @@ def duration(text):
 def gcode_metadata(text, name='Placa 1'):
     # Only comment lines are considered. Commands have no effect and are ignored.
     comments = '\n'.join(line[:4096] for line in text.splitlines() if line.lstrip().startswith(';'))
-    weights = re.findall(r'filament (?:used \[g\]|weight \[g\])\s*[:=]\s*([\d.,; ]+)', comments, re.I)
+    color_list=re.search(r'^;\s*filament_colou?r\s*=\s*([^\n]+)',comments,re.M|re.I)
+    material_list=re.search(r'^;\s*filament_type\s*=\s*([^\n]+)',comments,re.M|re.I)
+    palette=re.split('[;,]',color_list.group(1)) if color_list else []
+    materials=re.split('[;,]',material_list.group(1)) if material_list else []
+    weights = re.findall(r'^;\s*filament (?:used \[g\]|weight \[g\])\s*[:=]\s*([\d.,; ]+)', comments, re.I|re.M)
     colors = []
     if weights:
         values = re.split(r'[,;]\s*', weights[-1].strip())
-        colors = [{'label':f'Filamento {i+1}','grams':str(decimal(v))} for i,v in enumerate(values) if v.strip()]
+        colors = [{'label':palette[i].strip() if i<len(palette) else f'Filamento {i+1}',
+                   'hex':palette[i].strip() if i<len(palette) else '',
+                   'material':materials[i].strip() if i<len(materials) else 'PLA','grams':str(decimal(v))} for i,v in enumerate(values) if v.strip()]
     if not colors:
         total_weight=re.search(r'total filament weight \[g\]\s*[:=]\s*([0-9.]+)',comments,re.I)
         if total_weight:
             ids=re.search(r'^;\s*filament\s*:\s*(\d+)\s*$',comments,re.M|re.I)
-            color_list=re.search(r'^;\s*filament_colour\s*=\s*([^\n]+)',comments,re.M|re.I)
-            material_list=re.search(r'^;\s*filament_type\s*=\s*([^\n]+)',comments,re.M|re.I)
             if ids:
                 slot=int(ids.group(1))-1
-                palette=color_list.group(1).split(';') if color_list else []
-                materials=re.split('[;,]',material_list.group(1)) if material_list else []
                 color=palette[slot].strip() if 0<=slot<len(palette) else ''
                 material=materials[slot].strip() if 0<=slot<len(materials) else 'PLA'
                 colors=[{'label':color or f'Filamento {slot+1}','hex':color,'material':material,'grams':str(decimal(total_weight.group(1)))}]
@@ -54,7 +56,26 @@ def gcode_metadata(text, name='Placa 1'):
         hours = duration(sec.group(1)) if sec else None
     if not colors and hours is None:
         return None
-    return {'name':name,'hours':str(hours) if hours is not None else None,'colors':colors,'object_count':None}
+    printer=re.search(r'^;\s*printer_model\s*=\s*([^\n]+)',comments,re.I|re.M)
+    return {'name':name,'hours':str(hours) if hours is not None else None,'colors':colors,'object_count':None,
+            'printer_model':printer.group(1).strip() if printer else ''}
+
+
+def read_slicing_files(paths):
+    """Um projeto 3MF ou G-codes complementares; bloqueia cópias idênticas."""
+    from hashlib import sha256
+    paths=[Path(p) for p in paths]
+    if not paths:raise ValueError('Selecione ao menos um arquivo.')
+    if len(paths)>64 or sum(p.stat().st_size for p in paths)>MAX_FILE:raise ValueError('Seleção excede 64 arquivos ou 128 MB no total.')
+    if len(paths)>1 and any(p.suffix.lower()=='.3mf' for p in paths):raise ValueError('Use um único 3MF com todas as placas OU vários G-codes. Não misture para evitar consumo duplicado.')
+    seen=set();plates=[]
+    for path in paths:
+        digest=sha256(path.read_bytes()).digest()
+        if digest in seen:raise ValueError('Há arquivos idênticos na seleção. Remova a cópia para não duplicar o consumo.')
+        seen.add(digest)
+        for plate in read_slicing(path):
+            plates.append({**plate,'name':(path.name+' · ' if len(paths)>1 else '')+plate['name'],'source_name':path.name})
+    return plates
 
 
 def read_slicing(path):
@@ -62,7 +83,9 @@ def read_slicing(path):
     if path.stat().st_size > MAX_FILE:
         raise ValueError('Arquivo excede 128 MB.')
     if path.suffix.lower() in ('.gcode', '.gco'):
-        result = gcode_metadata(path.read_text(encoding='utf-8',errors='replace'))
+        text=path.read_text(encoding='utf-8',errors='replace')
+        if len(re.findall(r'^;\s*HEADER_BLOCK_START\s*$',text,re.M))>1:raise ValueError('G-code com vários cabeçalhos: selecione os arquivos individuais das placas para evitar totais ambíguos.')
+        result = gcode_metadata(text)
         if result:
             return [result]
         raise ValueError('G-code sem metadados compatíveis de peso/tempo. Não é possível inferir consumo de comandos.')

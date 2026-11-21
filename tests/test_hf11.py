@@ -23,7 +23,7 @@ def source_and_target(erp):
 
 def test_selected_product_import_replaces_recipe_and_keeps_color_edits(app,erp,tmp_path,monkeypatch):
     source,target=source_and_target(erp);file=sliced(tmp_path);w=MainWindow(erp);w.nav.setCurrentRow(1);w.select_product_row(target)
-    monkeypatch.setattr(QFileDialog,'getOpenFileName',lambda *a:(str(file),''))
+    monkeypatch.setattr(QFileDialog,'getOpenFileNames',lambda *a:([str(file)],''))
     monkeypatch.setattr(QMessageBox,'question',lambda *a:QMessageBox.StandardButton.Yes)
     monkeypatch.setattr(w,'info',lambda *a:None)
     def execute(dialog):

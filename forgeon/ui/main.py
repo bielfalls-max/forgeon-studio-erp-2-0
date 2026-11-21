@@ -233,7 +233,7 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
 
     @guarded
     def edit_product(self,pid=None):
-        v=self.erp.product(pid) if pid else {'name':'','model':'','weight':'0','hours':'0','manual_cents':None,'packaging_cents':0,'other_cents':0,'notes':''}
+        v=self.erp.product(pid) if pid else {'name':'','model':'','weight':'0','hours':'0','manual_cents':None,'packaging_cents':int(Decimal(self.s.settings().get('packaging_default','0.53'))*100),'other_cents':0,'notes':''}
         fields=[('name','Nome',v['name']),('model','Modelo / tamanho',v['model']),('weight','Peso (g)',v['weight']),('hours','Tempo de impressão (h)',v['hours']),
                 ('manual','Fabricação manual (R$; vazio = calculada)','' if v['manual_cents'] is None else str(Decimal(v['manual_cents'])/100)),
                 ('packaging','Embalagem (R$/un.)',str(Decimal(v['packaging_cents'])/100)),('other','Outros custos (R$/un.)',str(Decimal(v.get('_base_other_cents',v['other_cents']))/100)),('notes','Observações',v['notes'])]
@@ -304,17 +304,18 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
     def slicing(self):
         pid=None
         if self.stack.currentIndex()==1 and self.products_table.currentRow()>=0:pid=self.products_table.selected()['id']
-        path,_=QFileDialog.getOpenFileName(self,'Cadastrar produto pelo arquivo do fatiador','','Fatiamento (*.3mf *.gcode *.gco)')
-        if not path:return
-        dialog=SlicingProductDialog(self.erp,path,self,pid=pid)
+        paths,_=QFileDialog.getOpenFileNames(self,'Selecione um 3MF OU os G-codes de todas as placas','','Fatiamento (*.3mf *.gcode *.gco)')
+        if not paths:return
+        dialog=SlicingProductDialog(self.erp,paths,self,pid=pid)
         if dialog.exec()==QDialog.DialogCode.Accepted:
             pid,linked,frozen=dialog.result_data;self.last_product_id=pid
             self.nav.setCurrentRow(1);self.update_products();self.select_product_row(pid)
             self.info(f'Produto salvo com peso, cores e tempo.\n{linked} origens identificadas por variação exata. {frozen} custos pendentes registrados com data atual.\nCustos históricos já congelados foram preservados. A precificação está disponível no botão ao lado do cadastro.')
 
     def build_pricing(self):
-        p=Page('Precificação por produto','1. Escolha o produto.  2. Confira receita, embalagem e insumos.  3. Veja o preço sugerido ou teste o preço que deseja cobrar.')
+        p=Page('Precificação e projetos','Simule um projeto por G-code / 3MF sem cadastrar, ou selecione um produto para conferir custos e preço de venda.')
         self.pricing_product=QComboBox();self.pricing_product.setMinimumWidth(310);p.toolbar.addWidget(self.pricing_product)
+        p.button('Simular por G-code / 3MF',self.quote_from_slicer,True);p.button('Perfis de impressoras',self.edit_printer_profiles)
         p.button('Testar meu preço de venda',self.friendly_price,True);p.button('Recalcular',self.update_price);p.button('Editar custos e taxas',self.edit_settings);p.button('Editar produto',self.edit_priced_product);p.button('Preços de filamento',lambda:self.nav.setCurrentRow(2));p.button('Simular cenário',self.open_pricing_scenario)
         self.add_filters(p,'pricing',material=True,color=True)
         self.cost_review_label=QLabel();self.cost_review_label.setWordWrap(True);self.cost_review_label.setObjectName('badge');p.layout.addWidget(self.cost_review_label)
@@ -323,7 +324,7 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
             card=MetricCard(title,caption);metrics.addWidget(card);self.pricing_metrics.append(card)
         p.layout.addLayout(metrics)
         self.pricing_empty=GlassCard();label=QLabel('Nenhum produto cadastrado para precificar');self.pricing_empty_label=label;label.setObjectName('sectionTitle');self.pricing_empty.body.addWidget(label)
-        label=QLabel('Use Cadastrar via 3MF / G-code para ler as placas, peso e tempo do seu produto. Você também pode cadastrar manualmente em Produtos. Os valores aparecem aqui automaticamente após salvar.');label.setWordWrap(True);self.pricing_empty.body.addWidget(label);p.layout.addWidget(self.pricing_empty)
+        label=QLabel('Para um orçamento rápido, clique Simular por G-code / 3MF. Para manter a receita no catálogo, use Produtos → Cadastrar via 3MF / G-code ou Cadastro manual.');label.setWordWrap(True);self.pricing_empty.body.addWidget(label);p.layout.addWidget(self.pricing_empty)
         split=QHBoxLayout();p.layout.addLayout(split,1);self.pricing_components=Table();split.addWidget(self.pricing_components,1)
         self.price_detail=QTextBrowser();split.addWidget(self.price_detail,1)
         self.pricing_catalog=Table();self.pricing_catalog.setParent(p);self.pricing_catalog.hide()
@@ -345,21 +346,34 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
         self.cost_review_label.setText(self.cost_review_text())
 
     @guarded
+    def quote_from_slicer(self):
+        paths,_=QFileDialog.getOpenFileNames(self,'Simular: um 3MF OU os G-codes das placas','','Fatiamento (*.3mf *.gcode *.gco)')
+        if paths:SlicingProductDialog(self.erp,paths,self,quote=True).exec()
+
+    @guarded
+    def edit_printer_profiles(self):
+        from .printers import PrinterProfilesDialog
+        if PrinterProfilesDialog(self.erp,self).exec()==QDialog.DialogCode.Accepted:self.refresh()
+
+    @guarded
     def update_price(self):
         pid=self.pricing_product.currentData()
         if pid is None:
             for card in self.pricing_metrics:card.set_value('—')
             self.pricing_components.fill([],[('component','Composição do custo'),('amount_cents','R$/unidade')])
-            self.price_detail.setPlainText('Selecione um produto ou limpe os filtros. Para cadastrar, abra Produtos → Cadastro e use 3MF / G-code ou Cadastro manual.');return
-        c=self.erp.cost(pid); settings=self.s.settings()
+            self.price_detail.setPlainText('Use Simular por G-code / 3MF para estimar o projeto sem cadastrar. Ou selecione um produto para conferir sua composição de custo.');return
+        c=self.erp.cost(pid); settings=self.s.settings();priced_product=self.erp.product(pid)
         for card,value in zip(self.pricing_metrics,[number_text(c['grams'])+' g',hours_text(c['hours']),money(c['total_cents']),money(c['suggested_cents'])]):card.set_value(value)
+        if c['missing']:self.pricing_metrics[2].set_value('Pendente');self.pricing_metrics[3].set_value('Pendente')
         self.last_product_id=pid
         lines=[('Filamento calculado',c['material_cents']),('Energia calculada',c['energy_cents']),('Máquina calculada',c['machine_cents']),
                ('Fabricação utilizada'+(' (manual)' if c['manual'] else ''),c['manufacture_cents']),('Embalagem',c['packaging_cents']),('Outros',c['other_cents']),
+               ('Reserva de perdas / reimpressão ('+c['loss_percent']+'%)',c['loss_cents']),('Mão de obra por unidade',c['labor_cents']),
                ('Custo total por unidade',c['total_cents']),('Taxas no preço sugerido',c['fees_cents']),('Lucro no preço sugerido',c['profit_cents']),('Preço sugerido',c['suggested_cents'])]
         self.pricing_components.fill([{'component':name,'amount_cents':value} for name,value in lines],[('component','Composição / por unidade'),('amount_cents','Valor R$')])
         colors_html=''.join(f"<li>{text(x['material'])} · {text(x['color'])}: {number_text(x['grams'],3)} g</li>" for x in c['colors'])
         self.price_detail.setHtml(f"<h2>{text(self.erp.product(pid)['name'])}</h2><p>{text(', '.join(c['missing']) or 'Receita completa para calcular custos')}</p>"+
+            f"<p>Impressora: {text(priced_product.get('_printer_name','Média configurada'))}<br>Consumo médio: {text(priced_product.get('_power_w',settings['power_w']))} W · energia R$ {text(settings['energy_kwh'])}/kWh · máquina R$ {text(priced_product.get('_machine_hour',settings['machine_hour']))}/h</p>"+
             f"<h3>Parâmetros de venda</h3><p>Método: {text(settings['pricing_mode'])}<br>Margem/acréscimo: {text(settings['profit_percent'])}%<br>Taxa percentual configurada: {text(settings['fee_percent'])}%<br>Taxa fixa por unidade: R$ {text(settings['fee_fixed'])}</p>"+
             '<p>Revise as taxas do seu canal. Estes parâmetros não representam regras atuais garantidas da Shopee.</p>'+f'<h3>Receita de filamento por unidade</h3><ul>{colors_html}</ul>'+
             '<p>Com custo manual, ele substitui material + energia + máquina. Embalagem e outros continuam somados.</p>'+
@@ -759,12 +773,13 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
     @guarded
     def edit_settings(self):
         s=self.s.settings()
-        labels={'filament_kg':'Filamento padrão R$/kg','energy_kwh':'Energia R$/kWh','power_w':'Potência da impressora (W)','machine_hour':'Uso da máquina R$/h',
+        labels={'filament_kg':'Filamento padrão R$/kg','energy_kwh':'Energia R$/kWh','power_w':'Consumo médio geral (W)','machine_hour':'Máquina geral R$/h',
+                'packaging_default':'Embalagem padrão R$/unidade','labor_unit':'Mão de obra R$/unidade','loss_percent':'Reserva de perdas / reimpressão %',
                 'fee_percent':'Taxas percentuais %','fee_fixed':'Taxa fixa R$/unidade','profit_percent':'Margem ou acréscimo %'}
-        fields=[(k,label,s[k]) for k,label in labels.items()]
+        fields=[(k,label,s.get(k,'0')) for k,label in labels.items()]
         modes=[('Margem sobre venda','margem'),('Acréscimo sobre custo','acrescimo')]; modes.sort(key=lambda x:x[1]!=s['pricing_mode'])
         fields.append(('pricing_mode','Método',modes))
-        v=self.form('Custos atuais e taxas de precificação',fields,'Informe seus valores reais; os valores existentes são referências editáveis. Salvar registra a data da revisão e preserva custos históricos. Margem + taxas deve ser inferior a 100%. Taxa fixa é aplicada por unidade na sugestão; pedidos usam as taxas efetivas importadas.')
+        v=self.form('Custos atuais e taxas de precificação',fields,'Referências iniciais editáveis. Consumo e máquina gerais valem para produtos sem perfil; ajuste cada impressora em Perfis de impressoras. Reserva de perdas incide sobre fabricação, sem embalagem/mão de obra. Não duplique mão de obra em Outros. Embalagem padrão vale para cadastros novos; edite o produto para mudar uma embalagem existente. Salvar preserva custos históricos. Margem + taxas deve ser inferior a 100%.')
         if v:v['sku_width']=s['sku_width'];self.erp.save_settings(v);self.refresh()
 
     @guarded
@@ -777,7 +792,10 @@ class MainWindow(StudioMixin,AutomaticImportMixin,RefinementMixin,ManagementMixi
     def restore(self):
         path,_=QFileDialog.getOpenFileName(self,'Restaurar backup compatível','','SQLite (*.sqlite3)')
         if path and self.ask('Restaurar banco?','Substituir os dados atuais pelos do backup? Antes será preservada uma cópia consistente do banco atual.'):
-            saved=self.s.restore(path); self.refresh(); self.info(f'Banco restaurado. Banco anterior preservado em:\n{saved}')
+            saved=self.s.restore(path)
+            from ..business.printers import initialize_costs
+            initialize_costs(self.erp)
+            self.refresh(); self.info(f'Banco restaurado. Banco anterior preservado em:\n{saved}')
 
     @guarded
     def integrity(self):

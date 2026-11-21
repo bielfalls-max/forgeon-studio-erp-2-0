@@ -66,7 +66,7 @@ def resolve_known_products(erp):
     return linked,frozen
 
 
-def save_sliced_product(erp,name,model,recipe,colors,packaging='0',other='0',pid=None):
+def save_sliced_product(erp,name,model,recipe,colors,packaging='0',other='0',pid=None,printer_profile=None):
     if not name.strip():raise ValueError('Informe o nome físico do produto.')
     grams=sum((decimal(c['grams'],'Gramas') for c in colors),Decimal(0))
     if not colors or grams<=0:raise ValueError('O arquivo não informou consumo compatível por cor. Preencha manualmente sem inventar gramas.')
@@ -92,7 +92,11 @@ def save_sliced_product(erp,name,model,recipe,colors,packaging='0',other='0',pid
             s.db.execute('INSERT INTO filaments(material,color,kg_cents) VALUES(?,?,?) ON CONFLICT(material,color) DO UPDATE SET kg_cents=excluded.kg_cents',(material,label,kg))
             fid=s.one('SELECT id FROM filaments WHERE material=? AND color=?',(material,label))['id'];grouped[fid]+=decimal(g)
         s.db.executemany('INSERT INTO product_colors VALUES(?,?,?)',[(pid,fid,str(g)) for fid,g in grouped.items()])
-        detail={key:recipe.get(key) for key in ('name','hours','plates','units','source_name','warnings')}
+        if printer_profile is not None:
+            from .printers import PROFILES
+            if printer_profile not in (*PROFILES,'custom'):raise ValueError('Perfil de impressora inválido.')
+            s.db.execute('INSERT INTO preferences VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',('product_printer:'+str(pid),json.dumps(printer_profile)))
+        detail={key:recipe.get(key) for key in ('name','hours','plates','units','source_name','source_files','warnings')}
         s.db.execute('INSERT INTO product_slices VALUES(?,?,?) ON CONFLICT(product_id) DO UPDATE SET detail=excluded.detail,recorded=excluded.recorded',
                      (pid,json.dumps(detail,ensure_ascii=False),datetime.now().isoformat(timespec='seconds')))
         from .revisions import record_revision

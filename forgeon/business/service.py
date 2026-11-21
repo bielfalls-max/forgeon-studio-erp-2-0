@@ -8,6 +8,8 @@ from .pricing import calculate
 class ERP:
     def __init__(self, store):
         self.s = store
+        from .printers import initialize_costs
+        initialize_costs(self)
         if not self.s.one("SELECT key FROM preferences WHERE key='studio_backfill'"):
             from .studio import catalog_from_sales
             with self.s.transaction():
@@ -22,6 +24,11 @@ class ERP:
             raise ValueError('Produto não encontrado.')
         from .studio import product_extra
         p['_base_other_cents']=p['other_cents'];p['other_cents']+=product_extra(self.s,pid)
+        from .organization import preference
+        from .printers import profiles
+        profile=preference(self.s,'product_printer:'+str(pid),'custom')
+        data=profiles(self.s).get(profile) if profile!='custom' else None
+        if data:p.update(_power_w=data['power_w'],_machine_hour=data['machine_hour'],_printer_name=data['name'])
         return p
 
     def colors(self, pid):
@@ -36,7 +43,7 @@ class ERP:
             raise ValueError('Informe o nome do produto.')
         values = (name, str(data.get('model', '')).strip(), str(decimal(data.get('weight', 0), 'Peso')),
                   str(decimal(data.get('hours', 0), 'Horas')), None if str(data.get('manual', '')).strip() == '' else cents(data['manual']),
-                  cents(data.get('packaging', 0)), cents(data.get('other', 0)), str(data.get('notes', '')))
+                  cents(data.get('packaging', self.s.settings().get('packaging_default','0'))), cents(data.get('other', 0)), str(data.get('notes', '')))
         with self.s.transaction():
             if pid:
                 self.product(pid)
@@ -97,6 +104,9 @@ class ERP:
     def save_settings(self, data):
         for key in ('filament_kg','energy_kwh','power_w','machine_hour','fee_percent','fee_fixed','profit_percent'):
             data[key] = str(decimal(data[key], key))
+        for key in ('packaging_default','labor_unit','loss_percent'):
+            if key in data:data[key]=str(decimal(data[key],key))
+        if decimal(data.get('loss_percent','0'))>100:raise ValueError('Perdas: informe de 0 a 100%.')
         width = quantity(data['sku_width'])
         if width > 16:
             raise ValueError('Largura do SKU: de 1 a 16.')

@@ -1,5 +1,16 @@
 # Notas de atualização
 
+## 2.0.13 — HF12 · Projetos e custos — 20/11/2026
+
+- Produtos aceita um 3MF fatiado ou vários G-codes de placas selecionados juntos. Uma placa isolada não é tratada como o projeto inteiro. Arquivos idênticos e mistura 3MF/G-code são bloqueados para evitar duplicar consumo.
+- Corrige a leitura do filamento usado no G-code Bambu: o total de peso utiliza o slot/cor/material reais, sem assumir Filamento 1.
+- Precificação ganha Simular por G-code / 3MF: calcula o projeto por unidade sem criar produtos, materiais ou pedidos. Peso/tempo ausentes deixam o orçamento parcial e não geram preço sugerido.
+- Referências iniciais editáveis: embalagem R$ 0,53/un., mão de obra R$ 2/un. e reserva de perdas/reimpressão de 10% sobre fabricação (sem embalagem, mão de obra ou outros).
+- Energia SP: referência provisória R$ 1,10/kWh. Média geral inicial 140 W. Perfis PLA estimados: A1 120 W; AD5X 150 W; SPARKX i7 150 W. Máquina R$ 1/h é reserva provisória editável, não preço de compra/depreciação medido.
+- Importação permite escolher a impressora e guarda o perfil no produto. Perfis de impressoras permite editar consumo médio e custo/h para novas estimativas.
+- Padrões são aplicados uma vez: referências personalizadas de energia/potência e embalagens já preenchidas são preservadas. Embalagens zeradas recebem R$ 0,53 quando não há insumos vinculados. Custos congelados dos pedidos não são reescritos.
+- Importação/simulação usa conteúdo rolável com ação fixa no rodapé. Receitas incompletas mostram preço pendente.
+
 ## 2.0.12 — HF11 · Receitas e rolagem — 17/11/2026
 
 - Cadastrar via 3MF / G-code abre o produto selecionado como destino e substitui sua receita sem criar outro cadastro. Para um produto novo, escolha essa opção no campo Cadastro.

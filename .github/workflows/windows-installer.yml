@@ -90,9 +90,9 @@ jobs:
           if ($process.ExitCode -ne 0) { throw 'Instalação de teste falhou' }
           $after = (Get-FileHash -Algorithm SHA256 $database).Hash
           if ($before -ne $after) { throw 'Banco foi alterado pela instalação do hotfix' }
-          python -c "from forgeon.db.store import Store,data_directory; s=Store(data_directory()/'forgeon2.sqlite3'); s.validate(s.db); assert s.db.execute('PRAGMA user_version').fetchone()[0]==6; assert s.one('SELECT name FROM products')['name']=='PRODUTO DE TESTE DE PRESERVACAO'; assert list((data_directory()/'backups').glob('*.sqlite3')); s.close()"
+          python -c "from forgeon.db.store import Store,data_directory; s=Store(data_directory()/'forgeon2.sqlite3'); s.validate(s.db); assert s.db.execute('PRAGMA user_version').fetchone()[0]==6; assert s.one('SELECT name FROM products')['name']=='PRODUTO DE TESTE DE PRESERVACAO'; assert list((data_directory()/'backups').glob('*.sqlite3')); from forgeon.business.service import ERP; e=ERP(s); assert s.settings()['labor_unit']=='2' and s.settings()['loss_percent']=='10' and e.product(1)['packaging_cents']==53; s.close()"
           if ($LASTEXITCODE -ne 0) { throw 'Dados e backup não foram preservados' }
-          @{from='2.0.0';to=$env:APP_VERSION;database_unchanged=$true;backup_preserved=$true;schema_migrated=$true} | ConvertTo-Json | Set-Content -Encoding utf8 'verificacao-atualizacao.json'
+          @{from='2.0.0';to=$env:APP_VERSION;database_unchanged=$true;backup_preserved=$true;schema_migrated=$true;cost_defaults_applied=$true} | ConvertTo-Json | Set-Content -Encoding utf8 'verificacao-atualizacao.json'
 
           $exe = Join-Path $target 'ForgeonStudioERP.exe'
           $report = Join-Path $PWD 'verificacao-instalado.json'

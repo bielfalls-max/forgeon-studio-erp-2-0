@@ -68,7 +68,7 @@ class RefinementMixin:
 
     def cost_review_text(self):
         reviewed=preference(self.s,'cost:settings',{})
-        prefix=('Parâmetros revisados em '+reviewed['reviewed'][:10]) if reviewed else 'Parâmetros de referência: confirme seus valores em Editar custos e taxas.'
+        prefix=('Parâmetros revisados em '+reviewed['reviewed'][:10]) if reviewed else 'Estimativas iniciais editáveis: energia SP R$ 1,10/kWh; perdas 10%; mão de obra R$ 2/un. Confira em Editar custos e taxas e Perfis de impressoras.'
         return prefix+' · Alterações valem para novas estimativas; custos dos pedidos já congelados são preservados. Preços por kg ficam em Materiais → Cores e preços/kg.'
 
     @ui_action

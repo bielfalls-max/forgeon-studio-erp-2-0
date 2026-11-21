@@ -16,6 +16,7 @@ FORGEON_STUDIO_ERP_2_0/
   docs/HF09_PRODUTOS.md
   docs/HF10_CATALOGO_FISICO.md
   docs/HF11_RECEITAS.md
+  docs/HF12_PROJETOS_E_CUSTOS.md
   docs/HOTFIXES.md
   docs/INSTALADOR_WINDOWS.md
   docs/REGRAS_FINANCEIRAS.md
@@ -28,6 +29,7 @@ FORGEON_STUDIO_ERP_2_0/
   docs/resultado_hf09_pytest.txt
   docs/resultado_hf10_pytest.txt
   docs/resultado_hf11_pytest.txt
+  docs/resultado_hf12_pytest.txt
   docs/resultado_pytest.txt
   forgeon/__init__.py
   forgeon/__main__.py
@@ -44,7 +46,9 @@ FORGEON_STUDIO_ERP_2_0/
   forgeon/business/numbers.py
   forgeon/business/organization.py
   forgeon/business/pricing.py
+  forgeon/business/printers.py
   forgeon/business/production.py
+  forgeon/business/project_quote.py
   forgeon/business/recipes.py
   forgeon/business/revisions.py
   forgeon/business/service.py
@@ -78,6 +82,7 @@ FORGEON_STUDIO_ERP_2_0/
   forgeon/ui/main.py
   forgeon/ui/management.py
   forgeon/ui/navigation.py
+  forgeon/ui/printers.py
   forgeon/ui/production.py
   forgeon/ui/recipes.py
   forgeon/ui/refinement.py
@@ -117,6 +122,7 @@ FORGEON_STUDIO_ERP_2_0/
   tests/test_hf09.py
   tests/test_hf10.py
   tests/test_hf11.py
+  tests/test_hf12.py
   tests/test_hotfix.py
   tests/test_orders.py
   tests/test_packaging.py
